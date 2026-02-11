@@ -1,0 +1,20 @@
+{
+  "name": "job-api",
+  "version": "1.0.0",
+  "description": "The Job API is a scalable and production-ready RESTful backend application designed to manage job postings and applications.",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.4",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}
