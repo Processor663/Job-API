@@ -2,8 +2,7 @@ const express = require("express");
 const app = express();
 
 require("dotenv").config();
-
-const PORT = process.env.PORT || 3500;
+const cookieParser = require('cookie-parser');
 
 // connectDB
 const connectDB = require("./src/config/connectDB");
@@ -14,10 +13,14 @@ const authRoutes = require("./src/routes/auth.routes");
 const dns = require("dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
+const PORT = process.env.PORT || 3500;
+
+
 
 // Middlewares
+app.use(cookieParser());
 app.use(express.json());
-app.use('api/v1/auth', authRoutes)
+app.use('/api/v1/auth', authRoutes)
 
 
 
