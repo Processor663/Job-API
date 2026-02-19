@@ -9,6 +9,7 @@ const {
   hashToken,
 } = require("../utils/token");
 
+
 exports.register = async ({ name, email, role, password }) => {
   const existingUser = await UserModel.findOne({ email });
   if (existingUser) {
@@ -21,11 +22,14 @@ exports.register = async ({ name, email, role, password }) => {
     role,
     password: hashedPassword,
   });
+    const userPayload = {
+    id: user._id,
+    role: user.role, 
+  };
 
-  
   console.log("registration successful");
-  const accessToken = generateAccessToken(user);
-  const refreshToken = generateRefreshToken(user);
+  const accessToken = generateAccessToken(userPayload);
+  const refreshToken = generateRefreshToken(userPayload);
   const TokenHash = hashToken(refreshToken);
   RefreshTokenModel.create({
     user: user._id,
@@ -35,21 +39,49 @@ exports.register = async ({ name, email, role, password }) => {
   return { user, accessToken, refreshToken };
 };
 
-exports.login = async ({ name, email, role, password }) => {
-  //   const user = await UserModel.findOne({ email }).select("+password");
-  //   if (!user) throw new Error("Invalid credentials");
-  //   const isMatch = await user.comparePassword(password, user.password);
-  //   if (!isMatch) throw new Error("Invalid credentials");
-  //   const accessToken = generateAccessToken(user);
-  //   const refreshToken = generateRefreshToken(user);
-  //   const tokenHash = hashToken(refreshToken);
-  //   await RefreshToken.create({
-  //     user: user._id,
-  //     tokenHash,
-  //     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  //   });
-  //   return { accessToken, refreshToken };
-  // };
+// exports.login = async ({ name, email, role, password }) => {
+//     const user = await UserModel.findOne({ email }).select("+password");
+//     if (!user) throw new Error("Invalid credentials");
+//     const isMatch = await user.comparePassword(password, user.password);
+//     if (!isMatch) throw new Error("Invalid credentials");
+//     const userPayload = {
+//     name: user._id,
+//     role: user.role, 
+//   };
+
+//     const accessToken = generateAccessToken(userPayload);
+//     const refreshToken = generateRefreshToken(userPayload);
+//     const tokenHash = hashToken(refreshToken);
+//     await RefreshTokenModel.create({
+//       user: user._id,
+//       tokenHash,
+//       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+//     });
+//     return { accessToken, refreshToken };
+//   };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // exports.refresh = async (refreshToken) => {
   //   const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
   //   const tokenHash = hashToken(refreshToken);
@@ -74,7 +106,7 @@ exports.login = async ({ name, email, role, password }) => {
   //     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
   //   });
   //   return { newAccessToken, newRefreshToken };
-};
+// };
 
 // refresh updated by chat GPT
 

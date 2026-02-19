@@ -34,11 +34,12 @@ const registerController = async (req, res) => {
     res.cookie("accessToken", accessToken, accessCookieOptions);
     res.cookie("refreshToken", refreshToken, refreshCookieOptions);
     const updatedUser = {
+      id: user._id,
      name: user.name,
      email: user.email,
      role: user.role, 
     };
-    res.status(StatusCodes.CREATED).json({ user: updatedUser, accessToken });
+    res.status(StatusCodes.CREATED).json({ user: updatedUser});
   } catch (error) {
     res
       .status(StatusCodes.INTERNAL_SERVER_ERROR)
@@ -47,7 +48,34 @@ const registerController = async (req, res) => {
   }
 };
 
-const loginController = (req, res) => {
+// const loginController = async (req, res) => {
+  // console.log("login Successful");
+
+  // const { name, email, role, password } = req.body;
+  // const userData = { name, email, role, password };
+  //   try {
+  //     const { accessToken, refreshToken } = await authService(userData);
+
+  //     res
+  //       .cookie("accessToken", accessToken, accessCookieOptions)
+  //       .cookie("refreshToken", refreshToken, refreshCookieOptions)
+  //       .json({ message: "Logged in" });
+  //   } catch (err) {
+  //     res.status(401).json({ message: err.message });
+  //   }
+  // };
+
+
+
+// const logoutController = async (req, res) => {
+//   await authService.logout(req.cookies.refreshToken);
+//  res.clearCookie("accessToken");
+//   res.clearCookie("refreshToken");
+//   res.json({ message: "Logged out" });
+// };
+
+
+// const logoutAllController = (req, res) => {
   // const { name, email, role, password } = req.body;
   // const userData = { name, email, role, password };
   //   try {
@@ -61,10 +89,11 @@ const loginController = (req, res) => {
   //     res.status(401).json({ message: err.message });
   //   }
   // };
-  console.log("login");
-};
+  // console.log("logout all");
+// };
 
-module.exports = { registerController, loginController };
+// module.exports = { registerController, loginController, logoutController, logoutAllController };
+module.exports = { registerController };
 
 // exports.refresh = async (req, res) => {
 //   try {
@@ -80,9 +109,3 @@ module.exports = { registerController, loginController };
 //   }
 // };
 
-// exports.logout = async (req, res) => {
-//   await authService.logout(req.cookies.refreshToken);
-//   res.clearCookie("accessToken");
-//   res.clearCookie("refreshToken");
-//   res.json({ message: "Logged out" });
-// };

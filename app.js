@@ -22,15 +22,10 @@ app.use(cookieParser());
 app.use(express.json());
 app.use('/api/v1/auth', authRoutes)
 
-
-
-
-
-
 // Catch-all for this router only
-// app.use((req, res) => {
-//   res.status(404).json({ message: "Route not found" });
-// });
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
 
 
 
