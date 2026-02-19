@@ -9,103 +9,108 @@ const {
   hashToken,
 } = require("../utils/token");
 
+// Registration service
+exports.register = async (user) => {
+  try {
+    console.log("registration successful");
+    // Check if user already exists
+    const existingUser = await UserModel.findOne({ email: user.email });
+    if (existingUser) {
+      throw new Error("User already exists");
+    }
 
-exports.register = async ({ name, email, role, password }) => {
-  const existingUser = await UserModel.findOne({ email });
-  if (existingUser) {
-    throw new Error("User already exists");
-  }
-  const hashedPassword = await hashPassword(password);
-  const user = await UserModel.create({
-    name,
-    email,
-    role,
-    password: hashedPassword,
-  });
+    // Hash password before saving
+    const hashedPassword = await hashPassword(user.password);
+
+    // Create new user
+    const newUser = await UserModel.create({
+      ...user,
+      password: hashedPassword,
+    });
+
+    // Payload for tokens
     const userPayload = {
-    id: user._id,
-    role: user.role, 
-  };
+      id: newUser._id,
+      role: user.role,
+    };
 
-  console.log("registration successful");
-  const accessToken = generateAccessToken(userPayload);
-  const refreshToken = generateRefreshToken(userPayload);
-  const TokenHash = hashToken(refreshToken);
-  RefreshTokenModel.create({
-    user: user._id,
-    tokenHash: TokenHash,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  });
-  return { user, accessToken, refreshToken };
+    // Generate tokens and hash refresh token for storage
+    const accessToken = generateAccessToken(userPayload);
+    const refreshToken = generateRefreshToken(userPayload);
+    const TokenHash = hashToken(refreshToken);
+
+    // RefreshTokenModel schema has user field which is a reference to UserModel.
+    RefreshTokenModel.create({
+      user: newUser._id,
+      tokenHash: TokenHash,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
+
+    // Don't return password in response
+    const { password: _password, _id: id, ...userData } = newUser.toObject();
+    const safeUser = { id, ...userData };
+    return { user: safeUser, accessToken, refreshToken };
+  } catch (error) {
+    throw new Error("Registration failed: " + error.message);
+  }
 };
 
-// exports.login = async ({ name, email, role, password }) => {
-//     const user = await UserModel.findOne({ email }).select("+password");
-//     if (!user) throw new Error("Invalid credentials");
-//     const isMatch = await user.comparePassword(password, user.password);
-//     if (!isMatch) throw new Error("Invalid credentials");
-//     const userPayload = {
-//     name: user._id,
-//     role: user.role, 
-//   };
+// Login service
+exports.login = async (credentials) => {
+  try {
+    const user = await UserModel.findOne({ email: credentials.email }).select("+password");
+    console.log(user);
 
-//     const accessToken = generateAccessToken(userPayload);
-//     const refreshToken = generateRefreshToken(userPayload);
-//     const tokenHash = hashToken(refreshToken);
-//     await RefreshTokenModel.create({
-//       user: user._id,
-//       tokenHash,
-//       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-//     });
-//     return { accessToken, refreshToken };
-//   };
+    if (!user) throw new Error("Invalid credentials");
+    const isMatch = await comparePassword(credentials.password, user.password);
+    if (!isMatch) throw new Error("Invalid credentials");
+    const userPayload = {
+      id: user._id,
+      role: user.role,
+    };
 
+    // Generate tokens and hash refresh token for storage
+    const accessToken = generateAccessToken(userPayload);
+    const refreshToken = generateRefreshToken(userPayload);
+    const tokenHash = hashToken(refreshToken);
 
+    // Store hashed refresh token in database with reference to user
+    await RefreshTokenModel.create({
+      user: user._id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new Error("Login failed: " + error.message);
+  }
+};
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // exports.refresh = async (refreshToken) => {
-  //   const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-  //   const tokenHash = hashToken(refreshToken);
-  //   const existingToken = await RefreshToken.findOne({
-  //     tokenHash,
-  //     user: decoded.id,
-  //   });
-  //   if (!existingToken) {
-  //     // Token reuse detected
-  //     await RefreshToken.deleteMany({ user: decoded.id });
-  //     throw new Error("Refresh token reuse detected. Please login again.");
-  //   }
-  //   // Delete old refresh token (rotation)
-  //   await existingToken.deleteOne();
-  //   const user = await UserModel.findById(decoded.id);
-  //   const newAccessToken = generateAccessToken(user);
-  //   const newRefreshToken = generateRefreshToken(user);
-  //   const newTokenHash = hashToken(newRefreshToken);
-  //   await RefreshToken.create({
-  //     user: user._id,
-  //     tokenHash: newTokenHash,
-  //     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  //   });
-  //   return { newAccessToken, newRefreshToken };
+// exports.refresh = async (refreshToken) => {
+//   const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+//   const tokenHash = hashToken(refreshToken);
+//   const existingToken = await RefreshToken.findOne({
+//     tokenHash,
+//     user: decoded.id,
+//   });
+//   if (!existingToken) {
+//     // Token reuse detected
+//     await RefreshToken.deleteMany({ user: decoded.id });
+//     throw new Error("Refresh token reuse detected. Please login again.");
+//   }
+//   // Delete old refresh token (rotation)
+//   await existingToken.deleteOne();
+//   const user = await UserModel.findById(decoded.id);
+//   const newAccessToken = generateAccessToken(user);
+//   const newRefreshToken = generateRefreshToken(user);
+//   const newTokenHash = hashToken(newRefreshToken);
+//   await RefreshToken.create({
+//     user: user._id,
+//     tokenHash: newTokenHash,
+//     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+//   });
+//   return { newAccessToken, newRefreshToken };
 // };
 
 // refresh updated by chat GPT
