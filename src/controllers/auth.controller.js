@@ -1,5 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
-const { register, login, logout, logoutAll } = require("../services/auth.services");
+const { register, login, logout, logoutAllSessions, refresh } = require("../services/auth.services");
 require("dotenv").config();
 
 // check if we are in production environment to set secure cookie options
@@ -48,7 +48,6 @@ exports.registerController = async (req, res) => {
 
 // Controller for user login
 exports.loginController = async (req, res) => {
-  console.log("login Successful");
   const userData = req.body;
     try {
       if (!userData.email || !userData.password) {
@@ -58,14 +57,17 @@ exports.loginController = async (req, res) => {
       }
 
       const { accessToken, refreshToken } = await login(userData);
-
       res
         .cookie("accessToken", accessToken, accessCookieOptions)
         .cookie("refreshToken", refreshToken, refreshCookieOptions)
         .status(StatusCodes.OK)
         .json({success: true, message: "Logged in successfully" });
+        console.log("login Successful");
+
     } catch (err) {
       res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: err.message });
+      console.log("login failed:", err.message);
+
     }
   };
 
@@ -93,29 +95,28 @@ exports.logoutController = async (req, res) => {
 exports.logoutAllController = async (req, res) => {
   const userId = req.user?.id; // from auth middleware
     try {
-      await logoutAll(userId);
+      await logoutAllSessions(userId);
       res
         .clearCookie("accessToken", accessCookieOptions)
         .clearCookie("refreshToken", refreshCookieOptions)
         .sendStatus(StatusCodes.NO_CONTENT)
     } catch (err) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message });
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({success: false, message: err.message });
     }
   };
 
 
-
-// exports.refresh = async (req, res) => {
-//   try {
-//     const { newAccessToken, newRefreshToken } =
-//       await authService.refresh(req.cookies.refreshToken);
-
-//     res
-//       .cookie("accessToken", newAccessToken, cookieOptions)
-//       .cookie("refreshToken", newRefreshToken, cookieOptions)
-//       .json({ message: "Token refreshed" });
-//   } catch (err) {
-//     res.status(403).json({ message: err.message });
-//   }
-// };
+exports.refreshController = async (req, res) => {
+  try {
+    const { newAccessToken, newRefreshToken } =
+      await refresh(req.cookies.refreshToken);
+    res
+      .cookie("accessToken", newAccessToken, accessCookieOptions)
+      .cookie("refreshToken", newRefreshToken, refreshCookieOptions)
+      .status(StatusCodes.OK) 
+      .json({ success: true, message: "Token refreshed" });
+  } catch (err) {
+    res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: err.message });
+  }
+};
 

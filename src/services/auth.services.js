@@ -43,12 +43,14 @@ exports.register = async (user) => {
     RefreshTokenModel.create({
       user: newUser._id,
       tokenHash: TokenHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: process.env.REFRESH_EXPIRES,
     });
 
     // Don't return password in response
     const { password: _password, _id: id, ...userData } = newUser.toObject();
     const safeUser = { id, ...userData };
+
+    // Return user data and tokens
     return { user: safeUser, accessToken, refreshToken };
   } catch (error) {
     throw new Error("Registration failed: " + error.message);
@@ -61,7 +63,7 @@ exports.login = async (credentials) => {
     const user = await UserModel.findOne({ email: credentials.email }).select(
       "+password",
     );
-    console.log(user);
+    // console.log(user);
 
     if (!user) throw new Error("Invalid credentials");
     const isMatch = await comparePassword(credentials.password, user.password);
@@ -80,7 +82,7 @@ exports.login = async (credentials) => {
     await RefreshTokenModel.create({
       user: user._id,
       tokenHash,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiresAt: process.env.REFRESH_EXPIRES,
     });
 
     return { accessToken, refreshToken };
@@ -102,49 +104,60 @@ exports.logout = async (refreshToken) => {
 };
 
 // To logout from all devices, All refresh tokens for the user would be deleted from the database.
-exports.logoutAll = async (userId) => {
+exports.logoutAllSessions = async (userId) => {
   try {
-    if (!userId) throw new Error("User ID is required for logout all");
-    
-    const tokenHash = hashToken(refreshToken);
+    if (!userId)
+      throw new Error("User ID is required to logout from all sessions");
+
+    // const tokenHash = hashToken(refreshToken);
     await RefreshTokenModel.deleteMany({ user: userId });
   } catch (error) {
     throw new Error("Logout failed: " + error.message);
   }
 };
 
+exports.refresh = async (refreshToken) => {
+  try {
 
+    if (!refreshToken) throw new Error("Refresh token is required");
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
+    const tokenHash = hashToken(refreshToken);
+    const existingToken = await RefreshTokenModel.findOne({
+      tokenHash,
+      user: decoded.id,
+    });
 
+    if (!existingToken) {
+      // Token reuse detected
+      await RefreshTokenModel.deleteMany({ user: decoded.id });
+        console.warn(`⚠️ Refresh token reuse detected for user ${decoded.id} at ${new Date().toISOString()}`);
+      throw new Error("Refresh token reuse detected. Please login again.");
+    }
 
-// exports.refresh = async (refreshToken) => {
-//   const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-//   const tokenHash = hashToken(refreshToken);
-//   const existingToken = await RefreshToken.findOne({
-//     tokenHash,
-//     user: decoded.id,
-//   });
-//   if (!existingToken) {
-//     // Token reuse detected
-//     await RefreshToken.deleteMany({ user: decoded.id });
-//     throw new Error("Refresh token reuse detected. Please login again.");
-//   }
-//   // Delete old refresh token (rotation)
-//   await existingToken.deleteOne();
-//   const user = await UserModel.findById(decoded.id);
-//   const newAccessToken = generateAccessToken(user);
-//   const newRefreshToken = generateRefreshToken(user);
-//   const newTokenHash = hashToken(newRefreshToken);
-//   await RefreshToken.create({
-//     user: user._id,
-//     tokenHash: newTokenHash,
-//     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-//   });
-//   return { newAccessToken, newRefreshToken };
-// };
+    // Delete old refresh token (rotation)
+    await existingToken.deleteOne();
 
+    // Find user and generate new tokens
+    const user = await UserModel.findById(decoded.id);
+    if (!user) throw new Error("invalid user");
 
+    // Generate new tokens and hash refresh token for storage
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+    const newTokenHash = hashToken(newRefreshToken);
 
+    // Store new hashed refresh token in database with reference to user
+    await RefreshTokenModel.create({
+      user: user._id,
+      tokenHash: newTokenHash,
+      expiresAt: process.env.REFRESH_EXPIRES,
+    });
+    return { newAccessToken, newRefreshToken };
+  } catch (err) {
+    throw new Error("Invalid or expired refresh token");
 
+  }
+};
 
 // refresh updated by chat GPT
 
