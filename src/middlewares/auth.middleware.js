@@ -1,31 +1,32 @@
-const { statusCodes } = require("http-status-codes");
+const { StatusCodes } = require("http-status-codes");
 const jwt = require("jsonwebtoken");
-dotenv.config();
+require("dotenv").config();
 
 
 
-// exports.protect = (req, res, next) => {
-//   const token = req.cookies.accessToken;
+exports.protect = (req, res, next) => {
+  const token = req.cookies?.accessToken;
 
-//   if (!token)
-//     return res
-//       .status(statusCodes.UNAUTHORIZED)
-//       .json({ message: "Unauthorized" });
+  if (!token)
+    return res
+      .status(StatusCodes.UNAUTHORIZED)
+      .json({ message: "Unauthorized" });
 
-//   try {
-//     const decoded = jwt.verify(token, process.env.ACCESS_SECRET);
-//     req.user = decoded;
-//     next();
-//   } catch {
-//     return res
-//       .status(statusCodes.UNAUTHORIZED)
-//       .json({ message: "Invalid or expired token" });
-//   }
-// };
+  try {
+    const decoded = jwt.verify(token, process.env.ACCESS_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    console.log("Token verification failed:", error);
+    return res
+      .status(StatusCodes.UNAUTHORIZED)
+      .json({ message: "Invalid or expired token" });
+  }
+};
 
 // exports.authorize = (roles) => (req, res, next) => {
 //   if (!roles.includes(req.user.role)) {
-//     return res.status(statusCodes.FORBIDDEN).json({ message: "Forbidden" });
+//     return res.status(StatusCodes.FORBIDDEN).json({ message: "Forbidden" });
 //   } else {
 //     next();
 //   } 

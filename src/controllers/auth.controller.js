@@ -1,5 +1,5 @@
 const { StatusCodes } = require("http-status-codes");
-const { register, login } = require("../services/auth.services");
+const { register, login, logout, logoutAll } = require("../services/auth.services");
 require("dotenv").config();
 
 // check if we are in production environment to set secure cookie options
@@ -24,7 +24,7 @@ const refreshCookieOptions = {
 };
 
 // Controller for user registration
-const registerController = async (req, res) => {
+exports.registerController = async (req, res) => {
   const userData = req.body;
 
   if (!userData.name || !userData.email || !userData.password) {
@@ -47,7 +47,7 @@ const registerController = async (req, res) => {
 };
 
 // Controller for user login
-const loginController = async (req, res) => {
+exports.loginController = async (req, res) => {
   console.log("login Successful");
   const userData = req.body;
     try {
@@ -71,37 +71,39 @@ const loginController = async (req, res) => {
 
 
 
+// Controller for user logout
+exports.logoutController = async (req, res) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    await logout(refreshToken);
+
+    res.clearCookie("accessToken", accessCookieOptions);
+    res.clearCookie("refreshToken", refreshCookieOptions);
+
+    return res.sendStatus(StatusCodes.NO_CONTENT);
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({success: false, message: "Failed to log out" });
+  }
+};
 
 
-// const logoutController = async (req, res) => {
-//   await authService.logout(req.cookies.refreshToken);
-//  res.clearCookie("accessToken");
-//   res.clearCookie("refreshToken");
-//   res.json({ message: "Logged out" });
-// };
+// Controller for logging out from all devices
+exports.logoutAllController = async (req, res) => {
+  const userId = req.user?.id; // from auth middleware
+    try {
+      await logoutAll(userId);
+      res
+        .clearCookie("accessToken", accessCookieOptions)
+        .clearCookie("refreshToken", refreshCookieOptions)
+        .sendStatus(StatusCodes.NO_CONTENT)
+    } catch (err) {
+      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: err.message });
+    }
+  };
 
 
-
-
-// const logoutAllController = (req, res) => {
-  // const { name, email, role, password } = req.body;
-  // const userData = { name, email, role, password };
-  //   try {
-  //     const { accessToken, refreshToken } = await authService(userData);
-
-  //     res
-  //       .cookie("accessToken", accessToken, cookieOptions)
-  //       .cookie("refreshToken", refreshToken, cookieOptions)
-  //       .json({ message: "Logged in" });
-  //   } catch (err) {
-  //     res.status(401).json({ message: err.message });
-  //   }
-  // };
-  // console.log("logout all");
-// };
-
-// module.exports = { registerController, loginController, logoutController, logoutAllController };
-module.exports = { registerController, loginController };
 
 // exports.refresh = async (req, res) => {
 //   try {

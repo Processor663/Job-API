@@ -58,7 +58,9 @@ exports.register = async (user) => {
 // Login service
 exports.login = async (credentials) => {
   try {
-    const user = await UserModel.findOne({ email: credentials.email }).select("+password");
+    const user = await UserModel.findOne({ email: credentials.email }).select(
+      "+password",
+    );
     console.log(user);
 
     if (!user) throw new Error("Invalid credentials");
@@ -87,6 +89,33 @@ exports.login = async (credentials) => {
   }
 };
 
+// logout service
+exports.logout = async (refreshToken) => {
+  try {
+    if (!refreshToken) throw new Error("Refresh token is required for logout");
+
+    const tokenHash = hashToken(refreshToken);
+    await RefreshTokenModel.findOneAndDelete({ tokenHash });
+  } catch (error) {
+    throw new Error("Logout failed: " + error.message);
+  }
+};
+
+// To logout from all devices, All refresh tokens for the user would be deleted from the database.
+exports.logoutAll = async (userId) => {
+  try {
+    if (!userId) throw new Error("User ID is required for logout all");
+    
+    const tokenHash = hashToken(refreshToken);
+    await RefreshTokenModel.deleteMany({ user: userId });
+  } catch (error) {
+    throw new Error("Logout failed: " + error.message);
+  }
+};
+
+
+
+
 // exports.refresh = async (refreshToken) => {
 //   const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
 //   const tokenHash = hashToken(refreshToken);
@@ -112,6 +141,10 @@ exports.login = async (credentials) => {
 //   });
 //   return { newAccessToken, newRefreshToken };
 // };
+
+
+
+
 
 // refresh updated by chat GPT
 
@@ -153,20 +186,4 @@ exports.login = async (credentials) => {
 //   });
 
 //   return { newAccessToken, newRefreshToken };
-// };
-
-// export const logout = async (req, res) => {
-//   const token = req.cookies.refreshToken;
-
-//   if (!token) return res.sendStatus(204);
-
-//   const tokenHash = hashToken(token);
-
-//   await RefreshToken.findOneAndDelete({ tokenHash });
-
-//   res.clearCookie('refreshToken');
-
-//   res.sendStatus(204);
-// };
-
 // };
