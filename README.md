@@ -36,3 +36,18 @@ Rate limiting & request throttling
 Input validation & sanitization
 
 
+#Environment variables to add 
+
+// JWT secrets
+ACCESS_SECRET=
+REFRESH_SECRET=
+
+// JWT secrets and expiration times
+ACCESS_EXPIRES=
+REFRESH_EXPIRES=
+
+// Refresh token time to live in database 
+REFRESH_TOKEN_TTL = 
+
+// Server configuration
+NODE_ENV=development

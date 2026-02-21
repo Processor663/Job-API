@@ -116,7 +116,10 @@ exports.refreshController = async (req, res) => {
       .status(StatusCodes.OK) 
       .json({ success: true, message: "Token refreshed" });
   } catch (err) {
-    res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: err.message });
+   console.log("Refresh token error:", err.message)
+    res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Invalid or expired refresh token" });
   }
 };
+
+
 

@@ -2,6 +2,7 @@ const UserModel = require("../models/auth.model");
 const RefreshTokenModel = require("../models/token.model");
 const { hashPassword, comparePassword } = require("../utils/password.util");
 require("dotenv").config();
+const jwt = require("jsonwebtoken");
 
 const {
   generateAccessToken,
@@ -43,10 +44,10 @@ exports.register = async (user) => {
     RefreshTokenModel.create({
       user: newUser._id,
       tokenHash: TokenHash,
-      expiresAt: process.env.REFRESH_EXPIRES,
+      expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
     });
 
-    // Don't return password in response
+      // Don't return password in response
     const { password: _password, _id: id, ...userData } = newUser.toObject();
     const safeUser = { id, ...userData };
 
@@ -63,7 +64,6 @@ exports.login = async (credentials) => {
     const user = await UserModel.findOne({ email: credentials.email }).select(
       "+password",
     );
-    // console.log(user);
 
     if (!user) throw new Error("Invalid credentials");
     const isMatch = await comparePassword(credentials.password, user.password);
@@ -82,8 +82,10 @@ exports.login = async (credentials) => {
     await RefreshTokenModel.create({
       user: user._id,
       tokenHash,
-      expiresAt: process.env.REFRESH_EXPIRES,
+      // expiresAt: 34 * 60 * 60 * 1000, // 34 hours
+      expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
     });
+    console.log(parseInt(process.env.REFRESH_TOKEN_TTL));
 
     return { accessToken, refreshToken };
   } catch (error) {
@@ -116,87 +118,55 @@ exports.logoutAllSessions = async (userId) => {
   }
 };
 
+// Refresh token service with rotation and reuse detection
 exports.refresh = async (refreshToken) => {
-  try {
-
+  try {   
     if (!refreshToken) throw new Error("Refresh token is required");
+
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
     const tokenHash = hashToken(refreshToken);
+
     const existingToken = await RefreshTokenModel.findOne({
       tokenHash,
       user: decoded.id,
     });
 
+    // Reuse detection
     if (!existingToken) {
-      // Token reuse detected
       await RefreshTokenModel.deleteMany({ user: decoded.id });
-        console.warn(`⚠️ Refresh token reuse detected for user ${decoded.id} at ${new Date().toISOString()}`);
+      console.warn(
+        `⚠️ Refresh token reuse detected for user ${decoded.id} at ${new Date().toISOString()}`,
+      );
       throw new Error("Refresh token reuse detected. Please login again.");
     }
 
-    // Delete old refresh token (rotation)
+    // Manual expiry check (important)
+    if (new Date() > existingToken.expiresAt) {
+      await existingToken.deleteOne();
+      throw new Error("Refresh token expired");
+    }
+
+    // Rotation
     await existingToken.deleteOne();
 
-    // Find user and generate new tokens
     const user = await UserModel.findById(decoded.id);
-    if (!user) throw new Error("invalid user");
+    if (!user) throw new Error("Invalid user");
 
-    // Generate new tokens and hash refresh token for storage
-    const newAccessToken = generateAccessToken(user);
-    const newRefreshToken = generateRefreshToken(user);
-    const newTokenHash = hashToken(newRefreshToken);
+    const payload = { id: user._id, role: user.role };
 
-    // Store new hashed refresh token in database with reference to user
+    const newAccessToken = generateAccessToken(payload);
+    const newRefreshToken = generateRefreshToken(payload);
+
+    const ttl = Number(process.env.REFRESH_TOKEN_TTL);
+    if (!ttl) throw new Error("REFRESH_TOKEN_TTL not configured");
+
     await RefreshTokenModel.create({
       user: user._id,
-      tokenHash: newTokenHash,
-      expiresAt: process.env.REFRESH_EXPIRES,
+      tokenHash: hashToken(newRefreshToken),
+      expiresAt: new Date(Date.now() + ttl),
     });
+
     return { newAccessToken, newRefreshToken };
-  } catch (err) {
-    throw new Error("Invalid or expired refresh token");
-
-  }
-};
-
-// refresh updated by chat GPT
-
-// exports.refresh = async (refreshToken, deviceInfo) => {
-//   let decoded;
-//   try {
-//     decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
-//   } catch (err) {
-//     throw new Error("Invalid or expired refresh token");
-//   }
-
-//   const tokenHash = hashToken(refreshToken);
-//   const existingToken = await RefreshToken.findOne({
-//     tokenHash,
-//     user: decoded.id,
-//   });
-
-//   if (!existingToken) {
-//     // Token reuse detected
-//     await RefreshToken.deleteMany({ user: decoded.id });
-//     throw new Error("Refresh token reuse detected. Please login again.");
-//   }
-
-//   // Rotate token
-//   await existingToken.deleteOne();
-
-//   const user = await UserModel.findById(decoded.id);
-//   if (!user) throw new Error("UserModel not found");
-
-//   const newAccessToken = generateAccessToken(user);
-//   const newRefreshToken = generateRefreshToken(user);
-//   const newTokenHash = hashToken(newRefreshToken);
-
-//   await RefreshToken.create({
-//     user: user._id,
-//     tokenHash: newTokenHash,
-//     deviceInfo, // optional: track device/session
-//     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-//   });
-
-//   return { newAccessToken, newRefreshToken };
-// };
+    } catch (err) {
+    throw new Error(err.message);
+}}

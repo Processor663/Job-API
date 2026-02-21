@@ -6,18 +6,20 @@ const tokenSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true,
     },
     tokenHash: {
       type: String,
       required: true,
+      unique: true,
     },
     expiresAt: {
       type: Date,
       required: true,
-      expires: 0, 
+      index: { expires: 0 },
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const RefreshTokenModel = mongoose.model("RefreshToken", tokenSchema);

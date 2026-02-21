@@ -9,6 +9,7 @@ const connectDB = require("./src/config/connectDB");
 
 // auth routes
 const authRoutes = require("./src/routes/auth.routes");
+const jobsRoutes = require("./src/routes/jobs.routes");
 
 const dns = require("dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
@@ -21,6 +22,7 @@ const PORT = process.env.PORT || 3500;
 app.use(cookieParser());
 app.use(express.json());
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/jobs', jobsRoutes)
 
 // Catch-all for this router only
 app.use((req, res) => {
