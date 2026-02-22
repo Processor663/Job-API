@@ -3,16 +3,12 @@ const router = express.Router();
 const {protect} = require("../middlewares/auth.middleware");
 
 // Controllers
-const {
-//   registerController,
-//   loginController,
-//   logoutController,
-//   logoutAllController,
-//   refreshController
-} = require("../controllers/jobs.controller");
+const {JobCreate, deleteJob} = require("../controllers/jobs.controller");
 
 // Routes
-// router.route("/jobs").post();
+router.route("/jobs").post(protect, JobCreate);
+
+router.route("/jobs/:id").delete(protect, deleteJob);
 
 
 module.exports = router;

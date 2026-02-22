@@ -89,7 +89,8 @@ exports.login = async (credentials) => {
 
     return { accessToken, refreshToken };
   } catch (error) {
-    throw new Error("Login failed: " + error.message);
+    console.log("Login failed: " + error.message);
+    throw new Error("Login failed");
   }
 };
 

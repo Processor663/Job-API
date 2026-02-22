@@ -31,7 +31,7 @@ const jobSchema = new mongoose.Schema(
       maxlength: [2000, "Description cannot exceed 2000 characters"],
     },
     salary: {
-      type: Number,
+      type: String,
       min: [0, "Salary cannot be negative"],
     },
     postedBy: {
@@ -57,4 +57,6 @@ const jobSchema = new mongoose.Schema(
 // Optional: add indexes for common queries
 jobSchema.index({ title: "text", company: "text", location: "text" });
 
-module.exports = mongoose.model("Job", jobSchema);
+const JobsModel = mongoose.model("Job", jobSchema);
+module.exports = JobsModel
+

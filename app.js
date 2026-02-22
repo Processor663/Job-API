@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3500;
 app.use(cookieParser());
 app.use(express.json());
 app.use('/api/v1/auth', authRoutes)
-app.use('/api/v1/jobs', jobsRoutes)
+app.use('/api/v1', jobsRoutes)
 
 // Catch-all for this router only
 app.use((req, res) => {
