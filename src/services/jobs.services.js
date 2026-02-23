@@ -1,6 +1,19 @@
 //Jobs Model
 const JobsModel = require("../models/jobs.model");
 
+
+// Get Jobs
+exports.getJobs = async () => {
+  try {
+    const jobs = await JobsModel.find({});
+    return jobs;
+  } catch (err) {
+    throw new Error(err.message);
+  }
+};
+
+
+// Create Job
 exports.createJob = async (jobData, userId) => {
   const { title, company, location, type, description, salary, applyLink } =
     jobData;
@@ -28,18 +41,22 @@ exports.createJob = async (jobData, userId) => {
 };
 
 
-
+// Delete Job
 exports.deleteJob = async (jobId) => {
-
   try {
     if (!jobId) {
-      throw new Error("delete ID not found");
+      throw new Error("Job ID not provided");
     }
-    // const deletedJob = await JobsModel.findByIdAndDelete({id:jobId}, newValidation: true, new:true);
-    const deletedJob = await JobsModel.findByIdAndDelete({id:jobId});
-    return deletedJob
+
+    const deletedJob = await JobsModel.findByIdAndDelete(jobId);
+
+    if (!deletedJob) {
+      throw new Error(`Job with ID ${jobId} not found`);
+    }
+
+    return deletedJob;
   } catch (err) {
-    console.log(err.message)
-    throw new Error(" unabe to delete Job ");
+    console.error("Delete Job Error:", err.message);
+    throw new Error("Unable to delete Job");
   }
 };
