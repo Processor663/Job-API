@@ -27,8 +27,11 @@ app.use('/api/v1', jobsRoutes)
 // Catch-all for this router only
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
+    // next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
+// Global error handling middleware (it should be defined after all routes and other middlewares)
+// app.use(globalErrorHandler);
 
 
 const serverStart = async () => {
