@@ -10,7 +10,7 @@ exports.protect = (req, res, next) => {
   if (!token)
     return res
       .status(StatusCodes.UNAUTHORIZED)
-      .json({ message: "Unauthorized" });
+      .json({ success: false, message: "Unauthorized" });
 
   try {
     const decoded = jwt.verify(token, process.env.ACCESS_SECRET);

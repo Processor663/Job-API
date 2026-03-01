@@ -3,6 +3,9 @@ const RefreshTokenModel = require("../models/token.model");
 const { hashPassword, comparePassword } = require("../utils/password.util");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const asyncHandler = require("express-async-handler");
+const AppError = require("../utils/AppError");
+const { StatusCodes } = require("http-status-codes");
 
 const {
   generateAccessToken,
@@ -11,13 +14,12 @@ const {
 } = require("../utils/token");
 
 // Registration service
-exports.register = async (user) => {
-  try {
-    console.log("registration successful");
+exports.register = asyncHandler(async (user) => {
+
     // Check if user already exists
     const existingUser = await UserModel.findOne({ email: user.email });
     if (existingUser) {
-      throw new Error("User already exists");
+      throw new AppError("User already exists", StatusCodes.CONFLICT);
     }
 
     // Hash password before saving
@@ -53,21 +55,19 @@ exports.register = async (user) => {
 
     // Return user data and tokens
     return { user: safeUser, accessToken, refreshToken };
-  } catch (error) {
-    throw new Error("Registration failed: " + error.message);
-  }
-};
+ 
+});
 
 // Login service
-exports.login = async (credentials) => {
-  try {
+exports.login = asyncHandler(async (credentials) => {
+ 
     const user = await UserModel.findOne({ email: credentials.email }).select(
       "+password",
     );
 
-    if (!user) throw new Error("Invalid credentials");
+    if (!user) throw new AppError("Invalid credentials", StatusCodes.UNAUTHORIZED);
     const isMatch = await comparePassword(credentials.password, user.password);
-    if (!isMatch) throw new Error("Invalid credentials");
+    if (!isMatch) throw new AppError("Invalid credentials", StatusCodes.UNAUTHORIZED);
     const userPayload = {
       id: user._id,
       role: user.role,
@@ -85,44 +85,34 @@ exports.login = async (credentials) => {
       // expiresAt: 34 * 60 * 60 * 1000, // 34 hours
       expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
     });
-    console.log(parseInt(process.env.REFRESH_TOKEN_TTL));
+  
 
     return { accessToken, refreshToken };
-  } catch (error) {
-    console.log("Login failed: " + error.message);
-    throw new Error("Login failed");
-  }
-};
+
+});
 
 // logout service
-exports.logout = async (refreshToken) => {
-  try {
-    if (!refreshToken) throw new Error("Refresh token is required for logout");
+exports.logout = asyncHandler(async (refreshToken) => {
 
     const tokenHash = hashToken(refreshToken);
     await RefreshTokenModel.findOneAndDelete({ tokenHash });
-  } catch (error) {
-    throw new Error("Logout failed: " + error.message);
-  }
-};
+});
 
 // To logout from all devices, All refresh tokens for the user would be deleted from the database.
-exports.logoutAllSessions = async (userId) => {
+exports.logoutAllSessions = asyncHandler(async (userId) => {
   try {
     if (!userId)
-      throw new Error("User ID is required to logout from all sessions");
+      throw new AppError("User ID is required to logout from all sessions", StatusCodes.BAD_REQUEST);
 
     // const tokenHash = hashToken(refreshToken);
     await RefreshTokenModel.deleteMany({ user: userId });
   } catch (error) {
     throw new Error("Logout failed: " + error.message);
   }
-};
+});
 
 // Refresh token service with rotation and reuse detection
-exports.refresh = async (refreshToken) => {
-  try {   
-    if (!refreshToken) throw new Error("Refresh token is required");
+exports.refresh = asyncHandler(async (refreshToken) => { 
 
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
     const tokenHash = hashToken(refreshToken);
@@ -138,20 +128,20 @@ exports.refresh = async (refreshToken) => {
       console.warn(
         `⚠️ Refresh token reuse detected for user ${decoded.id} at ${new Date().toISOString()}`,
       );
-      throw new Error("Refresh token reuse detected. Please login again.");
+      throw new AppErrorError("Refresh token reuse detected. Please login again.");
     }
 
     // Manual expiry check (important)
     if (new Date() > existingToken.expiresAt) {
       await existingToken.deleteOne();
-      throw new Error("Refresh token expired");
+      throw new AppError("Refresh token expired", StatusCodes.UNAUTHORIZED);
     }
 
     // Rotation
     await existingToken.deleteOne();
 
     const user = await UserModel.findById(decoded.id);
-    if (!user) throw new Error("Invalid user");
+    if (!user) throw new AppError("Invalid user", StatusCodes.UNAUTHORIZED);
 
     const payload = { id: user._id, role: user.role };
 
@@ -159,7 +149,7 @@ exports.refresh = async (refreshToken) => {
     const newRefreshToken = generateRefreshToken(payload);
 
     const ttl = Number(process.env.REFRESH_TOKEN_TTL);
-    if (!ttl) throw new Error("REFRESH_TOKEN_TTL not configured");
+    if (!ttl) throw new AppError("REFRESH_TOKEN_TTL not configured", StatusCodes.INTERNAL_SERVER_ERROR);
 
     await RefreshTokenModel.create({
       user: user._id,
@@ -168,6 +158,5 @@ exports.refresh = async (refreshToken) => {
     });
 
     return { newAccessToken, newRefreshToken };
-    } catch (err) {
-    throw new Error(err.message);
-}}
+
+});

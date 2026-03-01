@@ -1,6 +1,14 @@
 const { StatusCodes } = require("http-status-codes");
-const { register, login, logout, logoutAllSessions, refresh } = require("../services/auth.services");
+const {
+  register,
+  login,
+  logout,
+  logoutAllSessions,
+  refresh,
+} = require("../services/auth.services");
 require("dotenv").config();
+const AppError = require("../utils/AppError");
+const asyncHandler = require("express-async-handler");
 
 // check if we are in production environment to set secure cookie options
 const isProduction = process.env.NODE_ENV === "production";
@@ -24,102 +32,85 @@ const refreshCookieOptions = {
 };
 
 // Controller for user registration
-exports.registerController = async (req, res) => {
+exports.registerController = asyncHandler(async (req, res) => {
   const userData = req.body;
 
   if (!userData.name || !userData.email || !userData.password) {
-    return res
-      .status(StatusCodes.BAD_REQUEST)
-      .json({ message: "Please provide name, email and password" });
+    throw new AppError(
+      "Please, provide name, email, and password",
+      StatusCodes.BAD_REQUEST,
+    );
   }
-  try {
-    const { user, accessToken, refreshToken } = await register(userData);
-    res.cookie("accessToken", accessToken, accessCookieOptions);
-    res.cookie("refreshToken", refreshToken, refreshCookieOptions);
-   
-    res.status(StatusCodes.CREATED).json({ success: true, user});
-  } catch (error) {
-    res
-      .status(StatusCodes.INTERNAL_SERVER_ERROR)
-      .json({ success: false, error: error.message });
-    console.error(error);
-  }
-};
+  const { user, accessToken, refreshToken } = await register(userData);
+  res.cookie("accessToken", accessToken, accessCookieOptions);
+  res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+
+  res.status(StatusCodes.CREATED).json({ success: true, user });
+});
 
 // Controller for user login
-exports.loginController = async (req, res) => {
+exports.loginController = asyncHandler(async (req, res) => {
   const userData = req.body;
-    try {
-      if (!userData.email || !userData.password) {
-        return res
-          .status(StatusCodes.BAD_REQUEST)
-          .json({ success: false, message: "Please provide email and password" });
-      }
 
-      const { accessToken, refreshToken } = await login(userData);
-      res
-        .cookie("accessToken", accessToken, accessCookieOptions)
-        .cookie("refreshToken", refreshToken, refreshCookieOptions)
-        .status(StatusCodes.OK)
-        .json({success: true, message: "Logged in successfully" });
-        console.log("login Successful");
+  if (!userData.email || !userData.password) {
+    throw new AppError(
+      "Please provide email and password",
+      StatusCodes.BAD_REQUEST,
+    );
+  }
 
-    } catch (err) {
-      res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: err.message });
-      console.log("login failed:", err.message);
-
-    }
-  };
-
-
+  const { accessToken, refreshToken } = await login(userData);
+  res
+    .cookie("accessToken", accessToken, accessCookieOptions)
+    .cookie("refreshToken", refreshToken, refreshCookieOptions)
+    .status(StatusCodes.OK)
+    .json({ success: true, message: "Logged in successfully" });
+  console.log("login Successful");
+});
 
 // Controller for user logout
-exports.logoutController = async (req, res) => {
-  try {
-    const refreshToken = req.cookies?.refreshToken;
-
-    await logout(refreshToken);
-
-    res.clearCookie("accessToken", accessCookieOptions);
-    res.clearCookie("refreshToken", refreshCookieOptions);
-
-    return res.sendStatus(StatusCodes.NO_CONTENT);
-  } catch (error) {
-    console.error("Logout error:", error);
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({success: false, message: "Failed to log out" });
+exports.logoutController = asyncHandler(async (req, res) => {
+  const refreshToken = req.cookies?.refreshToken;
+  if (!refreshToken) {
+    throw new AppError(
+      "Refresh token is required for logout",
+      StatusCodes.BAD_REQUEST,
+    );
   }
-};
 
+  await logout(refreshToken);
+
+  res.clearCookie("accessToken", accessCookieOptions);
+  res.clearCookie("refreshToken", refreshCookieOptions);
+
+  return res.sendStatus(StatusCodes.NO_CONTENT);
+});
 
 // Controller for logging out from all devices
-exports.logoutAllController = async (req, res) => {
+exports.logoutAllController = asyncHandler(async (req, res) => {
   const userId = req.user?.id; // from auth middleware
-    try {
-      await logoutAllSessions(userId);
-      res
-        .clearCookie("accessToken", accessCookieOptions)
-        .clearCookie("refreshToken", refreshCookieOptions)
-        .sendStatus(StatusCodes.NO_CONTENT)
-    } catch (err) {
-      res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({success: false, message: err.message });
-    }
-  };
+  if (!userId) {
+    throw new AppError(
+      "User ID is required to logout from all sessions",
+      StatusCodes.BAD_REQUEST,
+    );
+  }
+    await logoutAllSessions(userId);
+    res
+      .clearCookie("accessToken", accessCookieOptions)
+      .clearCookie("refreshToken", refreshCookieOptions)
+      .sendStatus(StatusCodes.NO_CONTENT);
+});
 
-
-exports.refreshController = async (req, res) => {
-  try {
-    const { newAccessToken, newRefreshToken } =
-      await refresh(req.cookies.refreshToken);
+exports.refreshController = asyncHandler(async (req, res) => {
+   if (!req.cookies?.refreshToken) throw new AppError("Refresh token is required", StatusCodes.BAD_REQUEST);
+  
+    const { newAccessToken, newRefreshToken } = await refresh(
+      req.cookies.refreshToken,
+    );
     res
       .cookie("accessToken", newAccessToken, accessCookieOptions)
       .cookie("refreshToken", newRefreshToken, refreshCookieOptions)
-      .status(StatusCodes.OK) 
+      .status(StatusCodes.OK)
       .json({ success: true, message: "Token refreshed" });
-  } catch (err) {
-   console.log("Refresh token error:", err.message)
-    res.status(StatusCodes.UNAUTHORIZED).json({ success: false, message: "Invalid or expired refresh token" });
-  }
-};
-
-
-
+});

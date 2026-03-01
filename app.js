@@ -11,6 +11,11 @@ const connectDB = require("./src/config/connectDB");
 const authRoutes = require("./src/routes/auth.routes");
 const jobsRoutes = require("./src/routes/jobs.routes");
 
+// AppError class for custom error handling
+const AppError = require("./src/utils/AppError");
+
+// Global error handler
+const globalErrorHandler = require("./src/middlewares/globalErrorHandler"); 
 const dns = require("dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
@@ -25,13 +30,13 @@ app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1', jobsRoutes)
 
 // Catch-all for this router only
-app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
-    // next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+app.use((req, res, next) => {
+  // res.status(404).json({ message: "Route not found" });
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
 });
 
 // Global error handling middleware (it should be defined after all routes and other middlewares)
-// app.use(globalErrorHandler);
+app.use(globalErrorHandler);
 
 
 const serverStart = async () => {
