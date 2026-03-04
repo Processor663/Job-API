@@ -1,33 +1,23 @@
 const { StatusCodes } = require("http-status-codes");
+const AppError = require("../utils/AppError");
+const asyncHandler = require("express-async-handler");
 
 // Jobs Model
 const { createJob, deleteJob, getJobs } = require("../services/jobs.services");
 
 //Get Jobs controller
-exports.getJobs = async (req, res) => {
-  try {
+exports.getJobs = asyncHandler (async (req, res) => {
     // Get jobs from service Layer
     const jobs = await getJobs();
-    if (!jobs) {
-      return res.status(StatusCodes.OK).json({
-        success: false,
-        message: "No job found"
-      });
+    if (!jobs || jobs.length === 0) {
+     throw new AppError("No jobs found", StatusCodes.NOT_FOUND);
     }
     return res.status(StatusCodes.OK).json({
       success: true,
       count: jobs.length,
       data: jobs,
     });
-
-  } catch (err) {
-    console.error("Get Jobs Error:", err.message);
-    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: "Failed to fetch jobs",
-    });
-  }
-};
+});
 
 
 exports.JobCreate = async (req, res) => {

@@ -5,26 +5,19 @@ const asyncHandler = require("express-async-handler");
 
 const AppError = require("../utils/AppError");
 
-
-
 // Get Jobs
-exports.getJobs = async () => {
-  try {
-    const jobs = await JobsModel.find({});
-    return jobs;
-  } catch (err) {
-    throw new Error(err.message);
-  }
-};
-
+exports.getJobs = asyncHandler(async () => {
+  const jobs = await JobsModel.find({});
+  return jobs;
+});
 
 // Create Job
-exports.createJob = async (jobData, userId) => {
+exports.createJob = asyncHandler(async (jobData, userId) => {
   const { title, company, location, type, description, salary, applyLink } =
     jobData;
   try {
     if (!title || !company || !location || !description) {
-      throw new Error("Missing required fields");
+      throw new AppError("Missing required fields", StatusCodes.BAD_REQUEST);
     }
     const job = await JobsModel.create({
       title,
@@ -38,13 +31,12 @@ exports.createJob = async (jobData, userId) => {
     });
 
     const jobData = job.toObject();
-    console.log(jobData)
+    console.log(jobData);
     return jobData;
   } catch (err) {
     throw new Error(err.message);
   }
-};
-
+});
 
 // Delete Job
 exports.deleteJob = async (jobId) => {
