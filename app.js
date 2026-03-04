@@ -5,7 +5,7 @@ require("dotenv").config();
 const cookieParser = require('cookie-parser');
 
 // connectDB
-const connectDB = require("./src/config/connectDB");
+const {connectDB, disconnectDB} = require("./src/config/connectDB");
 
 // auth routes
 const authRoutes = require("./src/routes/auth.routes");
@@ -16,6 +16,10 @@ const AppError = require("./src/utils/AppError");
 
 // Global error handler
 const globalErrorHandler = require("./src/middlewares/globalErrorHandler"); 
+
+// asyncHandler for wrapping async functions in routes
+// const asyncHandler = require("express-async-handler");
+
 const dns = require("dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
@@ -38,19 +42,63 @@ app.use((req, res, next) => {
 // Global error handling middleware (it should be defined after all routes and other middlewares)
 app.use(globalErrorHandler);
 
+let server; // store server reference
 
+// start server function with DB connection
 const serverStart = async () => {
   try {
     // Connect to DB
     await connectDB(process.env.MONGO_URI)
-    app.listen(PORT, () => {
-      console.log(`Server running on ${PORT}`);
+    server = app.listen(PORT, () => {
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`Server running on port ${PORT}`);
+      }
     });
-  } catch (error) {
-    console.error("Error connecting...", error);
-    process.exit(1)
+  } catch (err) {
+    console.error("Failed to start server:", err.message);
+    process.exit(1);
   }
 };
 
-// Start server
+// Graceful shutdown
+const shutdown = async (code = 0) => {
+  console.log("Shutting down server...");
+
+  // Safety net: force exit after 10 seconds
+  const forceExit = setTimeout(() => {
+    console.error("Force shutdown (timeout)");
+    process.exit(1);
+  }, 10000);
+
+  try {
+    if (server) {
+      await new Promise((resolve, reject) => {
+        server.close((err) => (err ? reject(err) : resolve()));
+      });
+    }
+
+    await disconnectDB();
+
+    clearTimeout(forceExit); // cancel the force exit
+    console.log("Shutdown complete");
+    process.exit(code);
+  } catch (err) {
+    console.error("Error during shutdown:", err.message);
+    process.exit(1);
+  }
+};
+
+// Process signals & errors
+process.on("SIGINT", () => shutdown(0));
+process.on("SIGTERM", () => shutdown(0));
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled Rejection:", err);
+  shutdown(1);
+});
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  shutdown(1);
+});
+
+// Start the server
 serverStart();
