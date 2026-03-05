@@ -15,45 +15,30 @@ exports.getJobs = asyncHandler(async () => {
 exports.createJob = asyncHandler(async (jobData, userId) => {
   const { title, company, location, type, description, salary, applyLink } =
     jobData;
-  try {
-    if (!title || !company || !location || !description) {
-      throw new AppError("Missing required fields", StatusCodes.BAD_REQUEST);
-    }
-    const job = await JobsModel.create({
-      title,
-      company,
-      location,
-      type,
-      description,
-      salary,
-      applyLink,
-      postedBy: userId,
-    });
 
-    const jobData = job.toObject();
-    console.log(jobData);
-    return jobData;
-  } catch (err) {
-    throw new Error(err.message);
-  }
+  const job = await JobsModel.create({
+    title,
+    company,
+    location,
+    type,
+    description,
+    salary,
+    applyLink,
+    postedBy: userId,
+  });
+
+  const createdJob = job.toObject();
+  return createdJob;
 });
 
 // Delete Job
-exports.deleteJob = async (jobId) => {
-  try {
-    if (!jobId) {
-      throw new Error("Job ID not provided");
-    }
+exports.deleteJob = asyncHandler(async (jobId) => {
 
-    const deletedJob = await JobsModel.findByIdAndDelete(jobId);
+  const deletedJob = await JobsModel.findByIdAndDelete(jobId);
 
-    if (!deletedJob) {
-      throw new Error(`Job with ID ${jobId} not found`);
-    }
-
-    return deletedJob;
-  } catch (err) {
-    console.error("Delete Job Error:", err.message);
-    throw new Error("Unable to delete Job");
+  if (!deletedJob) {
+    throw new AppError(`Job with ID ${jobId} not found`, StatusCodes.NOT_FOUND);
   }
-};
+
+  return deletedJob;
+});
