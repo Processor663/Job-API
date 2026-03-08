@@ -88,15 +88,15 @@ exports.jobUpdate = asyncHandler( async (req, res) => {
     throw new AppError("At least one field must be provided", StatusCodes.BAD_REQUEST);
   }
 
-  const jobData = {
-    title,
-    company,
-    location,
-    description,
-    salary,
-    status,
-    applyLink,
-  };
+  const jobData = {};
+
+  // Only update fields that are provided in the request body
+  if (title !== undefined) jobData.title = title;
+  if (company !== undefined) jobData.company = company;
+  if (location !== undefined) jobData.location = location;
+  if (description !== undefined) jobData.description = description;
+  if (salary !== undefined) jobData.salary = salary;
+  if (applyLink !== undefined) jobData.applyLink = applyLink;
 
   const updatedJob = await updateJob(jobId, jobData);
   res.status(StatusCodes.OK).json(updatedJob);
