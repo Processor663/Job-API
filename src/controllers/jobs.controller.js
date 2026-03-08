@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("express-async-handler");
+const { createJobSchema, updateJobSchema } = require("../validators/job.validator");
 
 // Jobs Model
 const { createJob, deleteJob, getJobs, updateJob } = require("../services/jobs.services");
@@ -21,38 +22,20 @@ exports.getJobs = asyncHandler(async (req, res) => {
 
 //Create Job Controller
 exports.JobCreate = asyncHandler(async (req, res) => {
+  
+  // Validate job data usind Zod schema
+ const result = createJobSchema.safeParse(req.body);
+ if (!result.success) {
+   const firstError = result.error?.errors?.[0]?.message || "Invalid input";
+   throw new AppError(firstError, StatusCodes.BAD_REQUEST);
+ }
+ const jobData = result.data;
+
+  // Get user ID from authenticated request
   const userId = req.user.id;
-  const { title, company, location, type, description, salary, applyLink } =
-    req.body;
-
   if (!userId) {
-    throw new Error("User ID is required");
+    throw new AppError("User ID is required", StatusCodes.BAD_REQUEST);
   }
-
-  // Validate job input
-  if (
-    !title ||
-    !company ||
-    !location ||
-    !description ||
-    !salary ||
-    !applyLink ||
-    !userId
-  ) {
-    throw new AppError(
-      "Job data is required",
-      StatusCodes.BAD_REQUEST,
-    );
-  }
-
-  const jobData = {
-    title,
-    company,
-    location,
-    description,
-    salary,
-    applyLink,
-  };
 
   // Create job from service Layer
   const createdJob = await createJob(jobData, userId);
@@ -65,38 +48,14 @@ exports.JobCreate = asyncHandler(async (req, res) => {
 
 // Update Job Controller
 exports.jobUpdate = asyncHandler( async (req, res) => {
-  const { title, company, location, description, salary, status, applyLink } =
-    req.body;
 
   const jobId = req.params.id;
+  const jobData = req.body;
 
   //JobID
   if (!jobId) {
     throw new AppError("Job ID not found", StatusCodes.BAD_REQUEST);
   }
-
-  // Validate job input
-  if (
-    !title &&
-    !company &&
-    !location &&
-    !description &&
-    !salary &&
-    !applyLink
-   
-  ) {
-    throw new AppError("At least one field must be provided", StatusCodes.BAD_REQUEST);
-  }
-
-  const jobData = {};
-
-  // Only update fields that are provided in the request body
-  if (title !== undefined) jobData.title = title;
-  if (company !== undefined) jobData.company = company;
-  if (location !== undefined) jobData.location = location;
-  if (description !== undefined) jobData.description = description;
-  if (salary !== undefined) jobData.salary = salary;
-  if (applyLink !== undefined) jobData.applyLink = applyLink;
 
   const updatedJob = await updateJob(jobId, jobData);
   res.status(StatusCodes.OK).json(updatedJob);
