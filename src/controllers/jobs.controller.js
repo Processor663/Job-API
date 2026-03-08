@@ -3,7 +3,7 @@ const AppError = require("../utils/AppError");
 const asyncHandler = require("express-async-handler");
 
 // Jobs Model
-const { createJob, deleteJob, getJobs } = require("../services/jobs.services");
+const { createJob, deleteJob, getJobs, updateJob } = require("../services/jobs.services");
 
 //Get Jobs controller
 exports.getJobs = asyncHandler(async (req, res) => {
@@ -19,6 +19,7 @@ exports.getJobs = asyncHandler(async (req, res) => {
   });
 });
 
+//Create Job Controller
 exports.JobCreate = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const { title, company, location, type, description, salary, applyLink } =
@@ -60,6 +61,45 @@ exports.JobCreate = asyncHandler(async (req, res) => {
     message: "Job created successfully",
     data: createdJob,
   });
+});
+
+// Update Job Controller
+exports.jobUpdate = asyncHandler( async (req, res) => {
+  const { title, company, location, description, salary, status, applyLink } =
+    req.body;
+
+  const jobId = req.params.id;
+
+  //JobID
+  if (!jobId) {
+    throw new AppError("Job ID not found", StatusCodes.BAD_REQUEST);
+  }
+
+  // Validate job input
+  if (
+    !title &&
+    !company &&
+    !location &&
+    !description &&
+    !salary &&
+    !applyLink
+   
+  ) {
+    throw new AppError("At least one field must be provided", StatusCodes.BAD_REQUEST);
+  }
+
+  const jobData = {
+    title,
+    company,
+    location,
+    description,
+    salary,
+    status,
+    applyLink,
+  };
+
+  const updatedJob = await updateJob(jobId, jobData);
+  res.status(StatusCodes.OK).json(updatedJob);
 });
 
 // Delete Job Controller

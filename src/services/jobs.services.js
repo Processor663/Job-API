@@ -31,6 +31,20 @@ exports.createJob = asyncHandler(async (jobData, userId) => {
   return createdJob;
 });
 
+// update Job 
+exports.updateJob = asyncHandler(async (jobId, jobData) => {
+  const updatedJob = await JobsModel.findByIdAndUpdate(jobId, jobData, {
+    returnDocument: "after",
+    runValidators: true,
+  }).lean();
+
+  if (!updatedJob) {
+    throw new AppError("Job not found", StatusCodes.NOT_FOUND);
+  }
+
+  return updatedJob;
+});
+
 // Delete Job
 exports.deleteJob = asyncHandler(async (jobId) => {
 
