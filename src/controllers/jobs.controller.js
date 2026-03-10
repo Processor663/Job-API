@@ -1,10 +1,18 @@
 const { StatusCodes } = require("http-status-codes");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("express-async-handler");
-const { createJobSchema, updateJobSchema } = require("../validators/job.validator");
+const {
+  createJobSchema,
+  updateJobSchema,
+} = require("../validators/job.validator");
 
 // Jobs Model
-const { createJob, deleteJob, getJobs, updateJob } = require("../services/jobs.services");
+const {
+  createJob,
+  deleteJob,
+  getJobs,
+  updateJob,
+} = require("../services/jobs.services");
 
 //Get Jobs controller
 exports.getJobs = asyncHandler(async (req, res) => {
@@ -22,14 +30,13 @@ exports.getJobs = asyncHandler(async (req, res) => {
 
 //Create Job Controller
 exports.JobCreate = asyncHandler(async (req, res) => {
-  
   // Validate job data usind Zod schema
- const result = createJobSchema.safeParse(req.body);
- if (!result.success) {
-   const firstError = result.error?.errors?.[0]?.message || "Invalid input";
-   throw new AppError(firstError, StatusCodes.BAD_REQUEST);
- }
- const jobData = result.data;
+  const result = createJobSchema.safeParse(req.body);
+  if (!result.success) {
+    const firstError = result.error?.errors?.[0]?.message || "Invalid input";
+    throw new AppError(firstError, StatusCodes.BAD_REQUEST);
+  }
+  const jobData = result.data;
 
   // Get user ID from authenticated request
   const userId = req.user.id;
@@ -47,12 +54,18 @@ exports.JobCreate = asyncHandler(async (req, res) => {
 });
 
 // Update Job Controller
-exports.jobUpdate = asyncHandler( async (req, res) => {
+exports.jobUpdate = asyncHandler(async (req, res) => {
+  // Validate job data usind Zod schema
+  const result = updateJobSchema.safeParse(req.body);
+  if (!result.success) {
+    const firstError = result.error?.errors?.[0]?.message || "Invalid input";
+    throw new AppError(firstError, StatusCodes.BAD_REQUEST);
+  }
 
+  // Extract validated data and job ID
+  const jobData = result.data;
   const jobId = req.params.id;
-  const jobData = req.body;
 
-  //JobID
   if (!jobId) {
     throw new AppError("Job ID not found", StatusCodes.BAD_REQUEST);
   }
@@ -74,7 +87,7 @@ exports.deleteJob = asyncHandler(async (req, res) => {
   if (!deletedJob) {
     throw new AppError(`Job with ID ${jobId} not found`, StatusCodes.NOT_FOUND);
   }
-  return res.status(StatusCodes.OK).json({
+  return res.status(StatusCodes.NO_CONTENT).json({
     success: true,
     message: "Job deleted successfully",
     data: deletedJob,

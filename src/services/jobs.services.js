@@ -13,17 +13,9 @@ exports.getJobs = asyncHandler(async () => {
 
 // Create Job
 exports.createJob = asyncHandler(async (jobData, userId) => {
-  const { title, company, location, type, description, salary, applyLink } =
-    jobData;
-
+ 
   const job = await JobsModel.create({
-    title,
-    company,
-    location,
-    type,
-    description,
-    salary,
-    applyLink,
+    ...jobData,
     postedBy: userId,
   });
 

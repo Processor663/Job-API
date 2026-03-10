@@ -3,7 +3,7 @@ const { z } = require("zod");
 const createJobSchema = z.object({
   title: z.string().min(3),
   company: z.string().min(2),
-  type: z.enum(["Full-time", "Part-time", "Contract", "Internship", "Remote"]),
+  type: z.enum(["Full-time", "Part-time", "Contract", "Internship", "Remote"]).optional(),
   location: z.string(),
   description: z.string(),
   salary: z.string(),
