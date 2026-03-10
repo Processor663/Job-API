@@ -40,21 +40,24 @@ Input validation & sanitization
 
 #Dependencies and devDependencies needed for this program
 
+ {
+  
   "dependencies": {
-    "bcrypt": 
-    "cookie-parser": ,
-    "crypto": ,
-    "dotenv": ,
-    "express": ,
-    "express-async-handler": ,
-    "http-status-codes": ,
-    "jsonwebtoken": ,
-    "mongoose": ,
-    "zod": 
+    "bcrypt": "",
+    "cookie-parser": "",
+    "crypto": "",
+    "dotenv": "",
+    "express": "",
+    "express-async-handler": "",
+    "http-status-codes": "",
+    "jsonwebtoken": "",
+    "mongoose": "",
+    "zod": ""
   },
   "devDependencies": {
-    "nodemon": 
+    "nodemon": ""
   }
+}
 
 
 

@@ -66,7 +66,7 @@ module.exports = (err, req, res, next) => {
   // Default values
   err.statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
   err.isOperational =
-    err.isOperational !== undefined ? err.isOperational : false;
+  err.isOperational !== undefined ? err.isOperational : false;
 
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
@@ -77,7 +77,8 @@ module.exports = (err, req, res, next) => {
     // Mongoose / MongoDB errors
     if (error.name === "CastError") error = handleDBCastError(error);
     if (error.code === 11000) error = handleDBDuplicateFields(error);
-    if (error.name === "ValidationError") error = handleDBValidationError(error);
+    if (error.name === "ValidationError")
+      error = handleDBValidationError(error);
 
     // JWT errors
     if (error.name === "JsonWebTokenError") error = handleJWTError();

@@ -17,8 +17,6 @@ const AppError = require("./src/utils/AppError");
 // Global error handler
 const globalErrorHandler = require("./src/middlewares/globalErrorHandler"); 
 
-// asyncHandler for wrapping async functions in routes
-// const asyncHandler = require("express-async-handler");
 
 const dns = require("dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
