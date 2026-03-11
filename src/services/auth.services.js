@@ -7,7 +7,7 @@ const asyncHandler = require("express-async-handler");
 const AppError = require("../utils/AppError");
 const { StatusCodes } = require("http-status-codes");
 const { generateToken } = require("../utils/token");
-const { sendEmail } = require("./email.service");
+const { sendVerificationEmail } = require("./email.service");
 const crypto = require("crypto");
 
 const {
@@ -45,36 +45,33 @@ exports.register = asyncHandler(async (user) => {
 
   // send email
   const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
-  await sendEmail({
-    to: user.email,
-    subject: "Verify Your Email",
-    html: `<a href="${verifyURL}">Verify Email</a>`,
-  });
+  await sendVerificationEmail(user.email, verifyURL);
 
   // Payload for tokens
-  const userPayload = {
-    id: newUser._id,
-    role: user.role,
-  };
+  // const userPayload = {
+  //   id: newUser._id,
+  //   role: user.role,
+  // };
 
   // Generate tokens and hash refresh token for storage
-  const accessToken = generateAccessToken(userPayload);
-  const refreshToken = generateRefreshToken(userPayload);
-  const TokenHash = hashToken(refreshToken);
+  // const accessToken = generateAccessToken(userPayload);
+  // const refreshToken = generateRefreshToken(userPayload);
+  // const TokenHash = hashToken(refreshToken);
 
   // TokenModel schema has user field which is a reference to UserModel.
-  TokenModel.create({
-    user: newUser._id,
-    tokenHash: TokenHash,
-    expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
-  });
+  // TokenModel.create({
+  //   user: newUser._id,
+  //   tokenHash: TokenHash,
+  //   expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
+  // });
 
   // Don't return password in response
-  const { password: _password, _id: id, ...userData } = newUser.toObject();
-  const safeUser = { id, ...userData };
+  // const { password: _password, _id: id, ...userData } = newUser.toObject();
+  // const safeUser = { id, ...userData };
 
   // Return user data and tokens
-  return { user: safeUser, accessToken, refreshToken };
+  // return { user: safeUser, accessToken, refreshToken };
+  return true;
 });
 
 // Login service
@@ -164,6 +161,10 @@ exports.verifyEmail = async (token) => {
     throw new AppError("User not found", StatusCodes.NOT_FOUND);
   }
 
+  if (user.isVerified) {
+    throw new AppError("User already verified", StatusCodes.BAD_REQUEST);
+  }
+
   user.isVerified = true;
   await user.save();
 
@@ -172,6 +173,25 @@ exports.verifyEmail = async (token) => {
 
   return true;
 };
+
+exports.resetPassword = asyncHandler(async (email) => {
+  const user = await UserModel.findOne({ email});
+  if (!user) {
+    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+  }
+
+  const { token, hashedToken } = generateToken();
+
+  await TokenModel.create({
+    userId: user._id,
+    tokenHash: hashedToken,
+    type: "passwordReset",
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+  });
+
+  const resetURL = `${process.env.CLIENT_URL}/reset-password/${token}`;
+  await sendPasswordResetEmail(user.email, resetURL);
+});
 
 // Refresh token service with rotation and reuse detection
 exports.refresh = asyncHandler(async (refreshToken) => {

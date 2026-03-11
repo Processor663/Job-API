@@ -43,9 +43,14 @@ exports.registerController = asyncHandler(async (req, res) => {
       StatusCodes.BAD_REQUEST,
     );
   }
-  const { _user, accessToken, refreshToken } = await register(userData);
-  res.cookie("accessToken", accessToken, accessCookieOptions);
-  res.cookie("refreshToken", refreshToken, refreshCookieOptions);
+  // const { _user, accessToken, refreshToken } = await register(userData);
+  const result = await register(userData);
+  /* res.cookie("accessToken", accessToken, accessCookieOptions);
+   res.cookie("refreshToken", refreshToken, refreshCookieOptions); */
+
+  if (!result) {
+    throw new AppError("Registration failed", StatusCodes.INTERNAL_SERVER_ERROR);
+  }
 
   res.status(StatusCodes.CREATED).json({ success: true, message: "User registered successfully. Please check your email to verify your account."});
 });

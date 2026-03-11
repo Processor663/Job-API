@@ -8,6 +8,7 @@ const {
   loginController,
   logoutController,
   logoutAllController,
+  verifyEmail,
   refreshController
 } = require("../controllers/auth.controller");
 
@@ -17,5 +18,6 @@ router.route("/login").post(loginController);
 router.route("/refresh").post(protect,refreshController);
 router.route("/logout").delete(protect,logoutController);
 router.route("/sessions").delete(protect,logoutAllController);
+router.route("/verify-email/:token").get(verifyEmail);
 
 module.exports = router;

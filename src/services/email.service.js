@@ -9,7 +9,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-exports.sendEmail = async (email, verificationUrl) => {
+exports.sendVerificationEmail = async (email, verificationUrl) => {
   await transporter.sendMail({
     to: email,
     subject: "Verify your email",
@@ -17,6 +17,18 @@ exports.sendEmail = async (email, verificationUrl) => {
       <h2>Email Verification</h2>
       <p>Click the link below to verify your email:</p>
       <a href="${verificationUrl}">Verify Email</a>
+    `,
+  });
+};
+
+exports.sendPasswordResetEmail = async (email, resetUrl) => {
+  await transporter.sendMail({
+    to: email,
+    subject: "Reset your password",
+    html: `
+      <h2>Password Reset</h2>
+      <p>Click the link below to reset your password:</p>
+      <a href="${resetUrl}">Reset Password</a>
     `,
   });
 };

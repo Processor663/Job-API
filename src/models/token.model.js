@@ -22,11 +22,14 @@ const tokenSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: { expires: 0 },
+      // index: { expires: 0 },
     },
   },
   { timestamps: true },
 );
+
+tokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+tokenSchema.index({ userId: 1, type: 1 });
 
 const TokenModel = mongoose.model("RefreshToken", tokenSchema);
 module.exports = TokenModel;
