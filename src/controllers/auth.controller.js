@@ -4,11 +4,13 @@ const {
   login,
   logout,
   logoutAllSessions,
+  verifyEmail,
   refresh,
 } = require("../services/auth.services");
 require("dotenv").config();
 const AppError = require("../utils/AppError");
 const asyncHandler = require("express-async-handler");
+
 
 // check if we are in production environment to set secure cookie options
 const isProduction = process.env.NODE_ENV === "production";
@@ -41,11 +43,11 @@ exports.registerController = asyncHandler(async (req, res) => {
       StatusCodes.BAD_REQUEST,
     );
   }
-  const { user, accessToken, refreshToken } = await register(userData);
+  const { _user, accessToken, refreshToken } = await register(userData);
   res.cookie("accessToken", accessToken, accessCookieOptions);
   res.cookie("refreshToken", refreshToken, refreshCookieOptions);
 
-  res.status(StatusCodes.CREATED).json({ success: true, user });
+  res.status(StatusCodes.CREATED).json({ success: true, message: "User registered successfully. Please check your email to verify your account."});
 });
 
 // Controller for user login
@@ -101,6 +103,19 @@ exports.logoutAllController = asyncHandler(async (req, res) => {
       .clearCookie("refreshToken", refreshCookieOptions)
       .sendStatus(StatusCodes.NO_CONTENT);
 });
+
+exports.verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.params.token;
+  if (!token) {
+    throw new AppError("Verification token is required", StatusCodes.BAD_REQUEST);
+  }
+  const result = await verifyEmail(token);
+  if (!result) {
+    throw new AppError("Invalid or expired token", StatusCodes.BAD_REQUEST);
+  }
+  res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully" });
+});
+
 
 exports.refreshController = asyncHandler(async (req, res) => {
    if (!req.cookies?.refreshToken) throw new AppError("Refresh token is required", StatusCodes.BAD_REQUEST);

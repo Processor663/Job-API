@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
 
-const tokenSchema = new mongoose.Schema(
+const emailVerificationSchema = new mongoose.Schema(
   {
-    user: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -13,12 +13,6 @@ const tokenSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    type: {
-      type: String,
-      enum: ["refreshToken", "emailVerification", "passwordReset"],
-      default: "refreshToken",
-      required: true,
-    },
     expiresAt: {
       type: Date,
       required: true,
@@ -28,5 +22,5 @@ const tokenSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-const TokenModel = mongoose.model("RefreshToken", tokenSchema);
-module.exports = TokenModel;
+const EmailVerificationTokenModel = mongoose.model("EmailVerificationToken", emailVerificationSchema);
+module.exports = EmailVerificationTokenModel;
