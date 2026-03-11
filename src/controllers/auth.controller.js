@@ -5,6 +5,7 @@ const {
   logout,
   logoutAllSessions,
   verifyEmail,
+  forgetPassword,
   refresh,
 } = require("../services/auth.services");
 require("dotenv").config();
@@ -121,6 +122,30 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully" });
 });
 
+exports.forgetPasswordController = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    throw new AppError("Email is required", StatusCodes.BAD_REQUEST);
+  }
+
+  const result = await forgetPassword(email);
+  if(!result) {
+    throw new AppError("Failed to send password reset link", StatusCodes.BAD_REQUEST);
+  }
+
+  res.status(StatusCodes.OK).json({ success: true, message: "Password reset link sent to your email" });
+});
+
+exports.resetPasswordController = asyncHandler(async (req, res) => {
+  const { token, newPassword } = req.body;
+
+  const result = await resetPassword(token, newPassword);
+  if (!result) {
+    throw new AppError("Failed to reset password", StatusCodes.BAD_REQUEST);
+  }
+
+  res.status(StatusCodes.OK).json({ success: true, message: "Password reset successfully" });
+});
 
 exports.refreshController = asyncHandler(async (req, res) => {
    if (!req.cookies?.refreshToken) throw new AppError("Refresh token is required", StatusCodes.BAD_REQUEST);

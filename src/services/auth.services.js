@@ -174,7 +174,7 @@ exports.verifyEmail = async (token) => {
   return true;
 };
 
-exports.resetPassword = asyncHandler(async (email) => {
+exports.forgetPassword = asyncHandler(async (email) => {
   const user = await UserModel.findOne({ email});
   if (!user) {
     throw new AppError("User not found", StatusCodes.NOT_FOUND);
@@ -191,6 +191,32 @@ exports.resetPassword = asyncHandler(async (email) => {
 
   const resetURL = `${process.env.CLIENT_URL}/reset-password/${token}`;
   await sendPasswordResetEmail(user.email, resetURL);
+});
+
+exports.resetPassword = asyncHandler(async (token, newPassword) => {
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const tokenDoc = await TokenModel.findOne({
+    tokenHash: hashedToken,
+    type: "passwordReset",
+    expiresAt: { $gt: Date.now() },
+  });
+
+  if (!tokenDoc) {
+    throw new AppError("Invalid or expired token", StatusCodes.BAD_REQUEST);
+  }
+
+  const user = await UserModel.findById(tokenDoc.userId);
+  if (!user) {
+    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+  }
+
+  user.password = await hashPassword(newPassword);
+  await user.save();
+
+  await tokenDoc.deleteOne();
+
+  return true;
 });
 
 // Refresh token service with rotation and reuse detection
