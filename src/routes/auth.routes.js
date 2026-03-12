@@ -9,7 +9,7 @@ const {
   logoutController,
   logoutAllController,
   verifyEmail,
-  forgetPasswordController,
+  forgotPasswordController,
   resetPasswordController,
   refreshController
 } = require("../controllers/auth.controller");
@@ -18,7 +18,7 @@ const {
 router.route("/verify-email/:token").get(verifyEmail);
 router.route("/register").post(registerController);
 router.route("/login").post(loginController);
-router.route("/forgot-password").post(forgetPasswordController);
+router.route("/forgot-password").post(forgotPasswordController);
 router.route("/reset-password").post(resetPasswordController);
 router.route("/refresh").post(protect,refreshController);
 router.route("/logout").delete(protect,logoutController);

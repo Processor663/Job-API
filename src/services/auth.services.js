@@ -17,7 +17,7 @@ const {
 } = require("../utils/token");
 
 // Registration service
-exports.register = asyncHandler(async (user) => {
+exports.register = async (user) => {
   // Check if user already exists
   const existingUser = await UserModel.findOne({ email: user.email });
   if (existingUser) {
@@ -72,10 +72,10 @@ exports.register = asyncHandler(async (user) => {
   // Return user data and tokens
   // return { user: safeUser, accessToken, refreshToken };
   return true;
-});
+};
 
 // Login service
-exports.login = asyncHandler(async (credentials) => {
+exports.login = async (credentials) => {
   const user = await UserModel.findOne({ email: credentials.email }).select(
     "+password",
   );
@@ -115,16 +115,16 @@ exports.login = asyncHandler(async (credentials) => {
   });
 
   return { accessToken, refreshToken };
-});
+};
 
 // logout service
-exports.logout = asyncHandler(async (refreshToken) => {
+exports.logout = async (refreshToken) => {
   const tokenHash = hashToken(refreshToken);
   await TokenModel.findOneAndDelete({ tokenHash });
-});
+};
 
 // To logout from all devices, All refresh tokens for the user would be deleted from the database.
-exports.logoutAllSessions = asyncHandler(async (userId) => {
+exports.logoutAllSessions = async (userId) => {
   try {
     if (!userId)
       throw new AppError(
@@ -137,26 +137,26 @@ exports.logoutAllSessions = asyncHandler(async (userId) => {
   } catch (error) {
     throw new Error("Logout failed: " + error.message);
   }
-});
+};
 
 exports.verifyEmail = async (token) => {
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-  // find token
-  const tokenDoc = await TokenModel.findOne({
+  const tokenDoc = await TokenModel.findOneAndDelete({
     token: hashedToken,
     type: "emailVerification",
     expiresAt: { $gt: Date.now() },
   });
 
   if (!tokenDoc) {
-   throw new AppError(
-      "Invalid or expired token",
+    throw new AppError(
+      "Invalid or expired verification token",
       StatusCodes.BAD_REQUEST,
     );
   }
 
-  const user = await UserModel.findById(tokenDoc._id);
+  const user = await UserModel.findById(tokenDoc.userId);
+
   if (!user) {
     throw new AppError("User not found", StatusCodes.NOT_FOUND);
   }
@@ -166,34 +166,39 @@ exports.verifyEmail = async (token) => {
   }
 
   user.isVerified = true;
-  await user.save();
 
-  // delete token after use
-  await tokenDoc.deleteOne();
+  await user.save();
 
   return true;
 };
 
-exports.forgetPassword = asyncHandler(async (email) => {
+exports.forgotPassword = async (email) => {
   const user = await UserModel.findOne({ email});
   if (!user) {
-    throw new AppError("User not found", StatusCodes.NOT_FOUND);
+   return ; // Don't reveal if email exists
   }
+
+  // Delete any existing password reset tokens for the user
+  await TokenModel.deleteMany({
+    userId: user._id,
+    type: "passwordReset",
+  });
+
 
   const { token, hashedToken } = generateToken();
 
   await TokenModel.create({
     userId: user._id,
-    tokenHash: hashedToken,
+    token: hashedToken,
     type: "passwordReset",
     expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
   });
 
   const resetURL = `${process.env.CLIENT_URL}/reset-password/${token}`;
   await sendPasswordResetEmail(user.email, resetURL);
-});
+};
 
-exports.resetPassword = asyncHandler(async (token, newPassword) => {
+exports.resetPassword = async (token, newPassword) => {
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
   const tokenDoc = await TokenModel.findOne({
@@ -217,21 +222,21 @@ exports.resetPassword = asyncHandler(async (token, newPassword) => {
   await tokenDoc.deleteOne();
 
   return true;
-});
+};
 
 // Refresh token service with rotation and reuse detection
-exports.refresh = asyncHandler(async (refreshToken) => {
+exports.refresh = async (refreshToken) => {
   const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
   const tokenHash = hashToken(refreshToken);
 
   const existingToken = await TokenModel.findOne({
-    tokenHash,
-    user: decoded.id,
+    token: tokenHash,
+    userId: decoded.id,
   });
 
   // Reuse detection
   if (!existingToken) {
-    await TokenModel.deleteMany({ user: decoded.id });
+    await TokenModel.deleteMany({ userId: decoded.id });
     console.warn(
       `⚠️ Refresh token reuse detected for user ${decoded.id} at ${new Date().toISOString()}`,
     );
@@ -265,10 +270,10 @@ exports.refresh = asyncHandler(async (refreshToken) => {
     );
 
   await TokenModel.create({
-    user: user._id,
-    tokenHash: hashToken(newRefreshToken),
+    userId: user._id,
+    token: hashToken(newRefreshToken),
     expiresAt: new Date(Date.now() + ttl),
   });
 
   return { newAccessToken, newRefreshToken };
-});
+};

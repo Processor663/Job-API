@@ -5,7 +5,7 @@ const {
   logout,
   logoutAllSessions,
   verifyEmail,
-  forgetPassword,
+  forgotPassword,
   refresh,
 } = require("../services/auth.services");
 require("dotenv").config();
@@ -111,28 +111,24 @@ exports.logoutAllController = asyncHandler(async (req, res) => {
 });
 
 exports.verifyEmail = asyncHandler(async (req, res) => {
-  const { token } = req.params.token;
+  const { token } = req.params;
   if (!token) {
     throw new AppError("Verification token is required", StatusCodes.BAD_REQUEST);
   }
-  const result = await verifyEmail(token);
-  if (!result) {
-    throw new AppError("Invalid or expired token", StatusCodes.BAD_REQUEST);
-  }
+ 
+  await verifyEmail(token);
+
   res.status(StatusCodes.OK).json({ success: true, message: "Email verified successfully" });
 });
 
-exports.forgetPasswordController = asyncHandler(async (req, res) => {
+exports.forgotPasswordController = asyncHandler(async (req, res) => {
   const { email } = req.body;
   if (!email) {
     throw new AppError("Email is required", StatusCodes.BAD_REQUEST);
   }
 
-  const result = await forgetPassword(email);
-  if(!result) {
-    throw new AppError("Failed to send password reset link", StatusCodes.BAD_REQUEST);
-  }
-
+  await forgotPassword(email);
+ 
   res.status(StatusCodes.OK).json({ success: true, message: "Password reset link sent to your email" });
 });
 
