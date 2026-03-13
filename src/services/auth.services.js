@@ -212,8 +212,9 @@ exports.refresh = async (refreshToken) => {
     console.warn(
       `⚠️ Refresh token reuse detected for user ${decoded.id} at ${new Date().toISOString()}`,
     );
-    throw new AppErrorError(
+    throw new AppError(
       "Refresh token reuse detected. Please login again.",
+      StatusCodes.BAD_REQUEST,
     );
   }
 
