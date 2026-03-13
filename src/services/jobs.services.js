@@ -6,13 +6,13 @@ const asyncHandler = require("express-async-handler");
 const AppError = require("../utils/AppError");
 
 // Get Jobs
-exports.getJobs = asyncHandler(async () => {
+exports.getJobs = async () => {
   const jobs = await JobsModel.find({});
   return jobs;
-});
+};
 
 // Create Job
-exports.createJob = asyncHandler(async (jobData, userId) => {
+exports.createJob = async (jobData, userId) => {
  
   const job = await JobsModel.create({
     ...jobData,
@@ -21,10 +21,10 @@ exports.createJob = asyncHandler(async (jobData, userId) => {
 
   const createdJob = job.toObject();
   return createdJob;
-});
+};
 
 // update Job 
-exports.updateJob = asyncHandler(async (jobId, jobData) => {
+exports.updateJob = async (jobId, jobData) => {
   const updatedJob = await JobsModel.findByIdAndUpdate(jobId, jobData, {
     returnDocument: "after",
     runValidators: true,
@@ -35,10 +35,10 @@ exports.updateJob = asyncHandler(async (jobId, jobData) => {
   }
 
   return updatedJob;
-});
+};
 
 // Delete Job
-exports.deleteJob = asyncHandler(async (jobId) => {
+exports.deleteJob = async (jobId) => {
 
   const deletedJob = await JobsModel.findByIdAndDelete(jobId);
 
@@ -47,4 +47,4 @@ exports.deleteJob = asyncHandler(async (jobId) => {
   }
 
   return deletedJob;
-});
+};

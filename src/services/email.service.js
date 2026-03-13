@@ -11,6 +11,7 @@ const transporter = nodemailer.createTransport({
 
 exports.sendVerificationEmail = async (email, verificationUrl) => {
   await transporter.sendMail({
+    from: '"Job API" <no-reply@jobapi.com>',
     to: email,
     subject: "Verify your email",
     html: `
@@ -23,6 +24,7 @@ exports.sendVerificationEmail = async (email, verificationUrl) => {
 
 exports.sendPasswordResetEmail = async (email, resetUrl) => {
   await transporter.sendMail({
+    from: '"Job API" <no-reply@jobapi.com>',
     to: email,
     subject: "Reset your password",
     html: `

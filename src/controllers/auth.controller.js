@@ -45,13 +45,9 @@ exports.registerController = asyncHandler(async (req, res) => {
     );
   }
   // const { _user, accessToken, refreshToken } = await register(userData);
-  const result = await register(userData);
+   await register(userData);
   /* res.cookie("accessToken", accessToken, accessCookieOptions);
    res.cookie("refreshToken", refreshToken, refreshCookieOptions); */
-
-  if (!result) {
-    throw new AppError("Registration failed", StatusCodes.INTERNAL_SERVER_ERROR);
-  }
 
   res.status(StatusCodes.CREATED).json({ success: true, message: "User registered successfully. Please check your email to verify your account."});
 });
@@ -134,12 +130,12 @@ exports.forgotPasswordController = asyncHandler(async (req, res) => {
 
 exports.resetPasswordController = asyncHandler(async (req, res) => {
   const { token, newPassword } = req.body;
-
-  const result = await resetPassword(token, newPassword);
-  if (!result) {
-    throw new AppError("Failed to reset password", StatusCodes.BAD_REQUEST);
+  if (!token || !newPassword) {
+    throw new AppError("Token and new password are required", StatusCodes.BAD_REQUEST);
   }
 
+   await resetPassword(token, newPassword);
+ 
   res.status(StatusCodes.OK).json({ success: true, message: "Password reset successfully" });
 });
 

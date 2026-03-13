@@ -3,10 +3,10 @@ const TokenModel = require("../models/token.model");
 const { hashPassword, comparePassword } = require("../utils/password.util");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
-const asyncHandler = require("express-async-handler");
 const AppError = require("../utils/AppError");
 const { StatusCodes } = require("http-status-codes");
 const { generateToken } = require("../utils/token");
+const { generateVerificationToken } = require("../utils/generateToken.util");
 const { sendVerificationEmail } = require("./email.service");
 const crypto = require("crypto");
 
@@ -18,60 +18,36 @@ const {
 
 // Registration service
 exports.register = async (user) => {
-  // Check if user already exists
-  const existingUser = await UserModel.findOne({ email: user.email });
-  if (existingUser) {
-    throw new AppError("User already exists", StatusCodes.CONFLICT);
-  }
+   // Check if user already exists
+   const existingUser = await UserModel.findOne({ email: user.email });
+   if (existingUser) {
+     throw new AppError("User already exists", StatusCodes.CONFLICT);
+   }
 
-  // Hash password before saving
-  const hashedPassword = await hashPassword(user.password);
+   // Hash password before saving
+   const hashedPassword = await hashPassword(user.password);
 
-  // Create new user
-  const newUser = await UserModel.create({
-    ...user,
-    password: hashedPassword,
-  });
+   // Create new user
+   const newUser = await UserModel.create({
+     ...user,
+     password: hashedPassword,
+   });
 
-  const { token, hashedToken } = generateToken();
+   const { token, hashedToken } = generateVerificationToken();
 
-  // store token in separate collection
-  await TokenModel.create({
-    userId: user._id,
-    token: hashedToken,
-    type: "emailVerification",
-    expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
-  });
+   // store token in separate collection
+   await TokenModel.create({
+     userId: newUser._id,
+     token: hashedToken,
+     type: "emailVerification",
+     expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+   });
 
-  // send email
-  const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
-  await sendVerificationEmail(user.email, verifyURL);
+   // send email
+   const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
+   console.log("Verification URL:", verifyURL); // For debugging  
+   await sendVerificationEmail(user.email, verifyURL);
 
-  // Payload for tokens
-  // const userPayload = {
-  //   id: newUser._id,
-  //   role: user.role,
-  // };
-
-  // Generate tokens and hash refresh token for storage
-  // const accessToken = generateAccessToken(userPayload);
-  // const refreshToken = generateRefreshToken(userPayload);
-  // const TokenHash = hashToken(refreshToken);
-
-  // TokenModel schema has user field which is a reference to UserModel.
-  // TokenModel.create({
-  //   user: newUser._id,
-  //   tokenHash: TokenHash,
-  //   expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
-  // });
-
-  // Don't return password in response
-  // const { password: _password, _id: id, ...userData } = newUser.toObject();
-  // const safeUser = { id, ...userData };
-
-  // Return user data and tokens
-  // return { user: safeUser, accessToken, refreshToken };
-  return true;
 };
 
 // Login service
@@ -108,8 +84,8 @@ exports.login = async (credentials) => {
 
   // Store hashed refresh token in database with reference to user
   await TokenModel.create({
-    user: user._id,
-    tokenHash,
+    userId: user._id,
+    token: tokenHash,
     // expiresAt: 34 * 60 * 60 * 1000, // 34 hours
     expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
   });
@@ -169,13 +145,14 @@ exports.verifyEmail = async (token) => {
 
   await user.save();
 
-  return true;
 };
 
 exports.forgotPassword = async (email) => {
-  const user = await UserModel.findOne({ email});
+  const user = await UserModel.findOne({ email });
+
+  // Don't reveal if email exists
   if (!user) {
-   return ; // Don't reveal if email exists
+    return;
   }
 
   // Delete any existing password reset tokens for the user
@@ -183,7 +160,6 @@ exports.forgotPassword = async (email) => {
     userId: user._id,
     type: "passwordReset",
   });
-
 
   const { token, hashedToken } = generateToken();
 
@@ -201,8 +177,8 @@ exports.forgotPassword = async (email) => {
 exports.resetPassword = async (token, newPassword) => {
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-  const tokenDoc = await TokenModel.findOne({
-    tokenHash: hashedToken,
+  const tokenDoc = await TokenModel.findOneAndDelete({
+    token: hashedToken,
     type: "passwordReset",
     expiresAt: { $gt: Date.now() },
   });
@@ -218,10 +194,6 @@ exports.resetPassword = async (token, newPassword) => {
 
   user.password = await hashPassword(newPassword);
   await user.save();
-
-  await tokenDoc.deleteOne();
-
-  return true;
 };
 
 // Refresh token service with rotation and reuse detection

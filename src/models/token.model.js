@@ -31,5 +31,5 @@ const tokenSchema = new mongoose.Schema(
 tokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 tokenSchema.index({ userId: 1, type: 1 });
 
-const TokenModel = mongoose.model("RefreshToken", tokenSchema);
+const TokenModel = mongoose.model("Token", tokenSchema);
 module.exports = TokenModel;
