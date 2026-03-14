@@ -18,9 +18,6 @@ const {
 exports.getJobs = asyncHandler(async (req, res) => {
   // Get jobs from service Layer
   const jobs = await getJobs();
-  if (!jobs || jobs.length === 0) {
-    throw new AppError("No jobs found", StatusCodes.NOT_FOUND);
-  }
   return res.status(StatusCodes.OK).json({
     success: true,
     count: jobs.length,

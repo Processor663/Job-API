@@ -7,7 +7,7 @@ const {
   verifyEmail,
   forgotPassword,
   resetPassword,
-  sendVerificationEmailService,
+  requestEmailVerification,
   refresh,
 } = require("../services/auth.services");
 require("dotenv").config();
@@ -108,7 +108,7 @@ exports.logoutAllController = asyncHandler(async (req, res) => {
       .sendStatus(StatusCodes.NO_CONTENT);
 });
 
-exports.verifyEmail = asyncHandler(async (req, res) => {
+exports.verifyEmailController = asyncHandler(async (req, res) => {
   const { token } = req.params;
   if (!token) {
     throw new AppError("Verification token is required", StatusCodes.BAD_REQUEST);
@@ -141,14 +141,16 @@ exports.resetPasswordController = asyncHandler(async (req, res) => {
   res.status(StatusCodes.OK).json({ success: true, message: "Password reset successfully" });
 });
 
-// exports.sendVerificationEmailController = asyncHandler(async (req, res) => {
-//   const { email } = req.body; 
-//   if (!email) {
-//     throw new AppError("Email is required", StatusCodes.BAD_REQUEST);
-//   } 
-//   await sendVerificationEmailService(email);
-//   res.status(StatusCodes.OK).json({ success: true, message: "Verification email sent" });
-// });
+exports.requestEmailVerificationController = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    throw new AppError("Email is required", StatusCodes.BAD_REQUEST);
+  }
+  await requestEmailVerification(email);
+  res
+    .status(StatusCodes.OK)
+    .json({ success: true, message: "Verification email sent" });
+});
 
 exports.refreshController = asyncHandler(async (req, res) => {
    if (!req.cookies?.refreshToken) throw new AppError("Refresh token is required", StatusCodes.BAD_REQUEST);

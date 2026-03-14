@@ -41,7 +41,9 @@ exports.register = async (user) => {
     userId: newUser._id,
     token: hashedToken,
     type: "emailVerification",
-    expiresAt: new Date(Date.now() + Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL)), // 1 hour expiry
+    expiresAt: new Date(
+      Date.now() + Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL),
+    ), // 1 hour expiry
   });
 
   // send email
@@ -65,8 +67,9 @@ exports.login = async (credentials) => {
     "+password",
   );
 
-  if (!user)
+  if (!user) {
     throw new AppError("Invalid credentials", StatusCodes.UNAUTHORIZED);
+  }
 
   const isMatch = await comparePassword(credentials.password, user.password);
 
@@ -105,7 +108,7 @@ exports.login = async (credentials) => {
 // logout service
 exports.logout = async (refreshToken) => {
   const tokenHash = hashToken(refreshToken);
-  const deletedToken = await TokenModel.findOneAndDelete({ token: tokenHash });
+  const deletedToken = await TokenModel.findOneAndDelete({ token: tokenHash, type: "refreshToken" });
 
   if (!deletedToken) {
     throw new AppError("Invalid refresh token", StatusCodes.BAD_REQUEST);
@@ -120,7 +123,7 @@ exports.logoutAllSessions = async (userId) => {
       StatusCodes.BAD_REQUEST,
     );
 
-  const deletedTokens = await TokenModel.deleteMany({ userId });
+  const deletedTokens = await TokenModel.deleteMany({ userId, type: "refreshToken" });
   if (
     deletedTokens.deletedCount === 0 ||
     deletedTokens.deletedCount === undefined
@@ -224,41 +227,49 @@ exports.resetPassword = async (token, newPassword) => {
   await user.save();
 };
 
-// exports.sendVerificationEmailService = async (email) => {
-//   const newUser = await UserModel.findOne({ email });
-//   // Don't reveal if email exists
-//   if (!newUser) {
-//     return;
-//   }
+exports.requestEmailVerification = async (email) => {
+  const user = await UserModel.findOne({ email });
+  // Don't reveal if email exists
+  if (!user) {
+    return;
+  }
 
-//   const { token, hashedToken } = generateVerificationToken();
+  if (user.isVerified) {
+    throw new AppError("Email is already verified", StatusCodes.BAD_REQUEST);
+  }
 
-//   await TokenModel.deleteMany({
-//     userId: newUser._id,
-//     type: "emailVerification",
-//   });
 
-//   await TokenModel.create({
-//     userId: newUser._id,
-//     token: hashedToken,
-//     type: "emailVerification",
-//     expiresAt: new Date(Date.now() + Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL)), // 1 hour expiry
-//   });
+  // delete old verification tokens
+  await TokenModel.deleteMany({
+    userId: user._id,
+    type: "emailVerification",
+  });
 
-//   // send email
-//   const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
-//   console.log("Verification URL:", verifyURL); // For debugging
+  const { token, hashedToken } = generateVerificationToken();
 
-//   try {
-//     await sendVerificationEmail(newUser.email, verifyURL);
-//   } catch (error) {
-//     console.error("Error sending verification email:", error);
-//     throw new AppError(
-//       "Failed to send verification email. Please try again later.",
-//       StatusCodes.INTERNAL_SERVER_ERROR,
-//     );
-//   }
-// };
+  await TokenModel.create({
+    userId: user._id,
+    token: hashedToken,
+    type: "emailVerification",
+    expiresAt: new Date(
+      Date.now() + Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL),
+    ), // 1 hour expiry
+  });
+
+  // send email
+  const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
+  console.log("Verification URL:", verifyURL); // For debugging
+
+  try {
+    await sendVerificationEmail(user.email, verifyURL);
+  } catch (error) {
+    console.error("Error sending verification email:", error);
+    throw new AppError(
+      "Failed to send verification email. Please try again later.",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+    );
+  }
+};
 
 // Refresh token service with rotation and reuse detection
 exports.refresh = async (refreshToken) => {
