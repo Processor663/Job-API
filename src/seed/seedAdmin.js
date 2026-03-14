@@ -7,7 +7,6 @@ const MONGO_URI = process.env.MONGO_URI;
 const dns = require("dns");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
-
 mongoose
   .connect(MONGO_URI)
   .then(() => console.log("DB connected"))
@@ -18,7 +17,9 @@ mongoose
 
 const seedAdmin = async () => {
   try {
-    const existingAdmin = await User.findOne({ email: process.env.ADMIN_EMAIL });
+    const existingAdmin = await User.findOne({
+      email: process.env.ADMIN_EMAIL,
+    });
     if (existingAdmin) {
       console.log("Admin user already exists");
       process.exit();
@@ -27,10 +28,11 @@ const seedAdmin = async () => {
     const password = await hashPassword(process.env.ADMIN_PASSWORD); // default admin password
 
     const admin = await User.create({
-      name: process.env.ADMIN_NAME,
+      name: "super admin",
       email: process.env.ADMIN_EMAIL,
       password,
       role: "admin",
+      isVerified: true,
     });
 
     console.log("Admin seeded:", admin);

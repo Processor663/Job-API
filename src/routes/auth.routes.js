@@ -24,5 +24,4 @@ router.route("/refresh").post(protect,refreshController);
 router.route("/logout").delete(protect,logoutController);
 router.route("/sessions").delete(protect,logoutAllController);
 
-
 module.exports = router;

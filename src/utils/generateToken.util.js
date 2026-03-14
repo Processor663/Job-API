@@ -7,3 +7,4 @@ exports.generateVerificationToken = () => {
 
   return { token, hashedToken };
 };
+

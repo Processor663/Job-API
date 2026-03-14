@@ -5,9 +5,11 @@ require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const AppError = require("../utils/AppError");
 const { StatusCodes } = require("http-status-codes");
-const { generateToken } = require("../utils/token");
 const { generateVerificationToken } = require("../utils/generateToken.util");
-const { sendVerificationEmail } = require("./email.service");
+const {
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+} = require("./email.service");
 const crypto = require("crypto");
 
 const {
@@ -18,36 +20,43 @@ const {
 
 // Registration service
 exports.register = async (user) => {
-   // Check if user already exists
-   const existingUser = await UserModel.findOne({ email: user.email });
-   if (existingUser) {
-     throw new AppError("User already exists", StatusCodes.CONFLICT);
-   }
+  // Check if user already exists
+  const existingUser = await UserModel.findOne({ email: user.email });
+  if (existingUser) {
+    throw new AppError("User already exists", StatusCodes.CONFLICT);
+  }
 
-   // Hash password before saving
-   const hashedPassword = await hashPassword(user.password);
+  // Hash password before saving
+  const hashedPassword = await hashPassword(user.password);
 
-   // Create new user
-   const newUser = await UserModel.create({
-     ...user,
-     password: hashedPassword,
-   });
+  // Create new user
+  const newUser = await UserModel.create({
+    ...user,
+    password: hashedPassword,
+  });
 
-   const { token, hashedToken } = generateVerificationToken();
+  const { token, hashedToken } = generateVerificationToken();
 
-   // store token in separate collection
-   await TokenModel.create({
-     userId: newUser._id,
-     token: hashedToken,
-     type: "emailVerification",
-     expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
-   });
+  await TokenModel.create({
+    userId: newUser._id,
+    token: hashedToken,
+    type: "emailVerification",
+    expiresAt: new Date(Date.now() + Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL)), // 1 hour expiry
+  });
 
-   // send email
-   const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
-   console.log("Verification URL:", verifyURL); // For debugging  
-   await sendVerificationEmail(user.email, verifyURL);
+  // send email
+  const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
+  console.log("Verification URL:", verifyURL); // For debugging
 
+  try {
+    await sendVerificationEmail(user.email, verifyURL);
+  } catch (error) {
+    console.error("Email sending failed:", error.message);
+    throw new AppError(
+      "Failed to send verification email. Please try again later.",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+    );
+  }
 };
 
 // Login service
@@ -96,22 +105,30 @@ exports.login = async (credentials) => {
 // logout service
 exports.logout = async (refreshToken) => {
   const tokenHash = hashToken(refreshToken);
-  await TokenModel.findOneAndDelete({ tokenHash });
+  const deletedToken = await TokenModel.findOneAndDelete({ token: tokenHash });
+
+  if (!deletedToken) {
+    throw new AppError("Invalid refresh token", StatusCodes.BAD_REQUEST);
+  }
 };
 
 // To logout from all devices, All refresh tokens for the user would be deleted from the database.
 exports.logoutAllSessions = async (userId) => {
-  try {
-    if (!userId)
-      throw new AppError(
-        "User ID is required to logout from all sessions",
-        StatusCodes.BAD_REQUEST,
-      );
+  if (!userId)
+    throw new AppError(
+      "User ID is required to logout from all sessions",
+      StatusCodes.BAD_REQUEST,
+    );
 
-    // const tokenHash = hashToken(refreshToken);
-    await TokenModel.deleteMany({ user: userId });
-  } catch (error) {
-    throw new Error("Logout failed: " + error.message);
+  const deletedTokens = await TokenModel.deleteMany({ userId });
+  if (
+    deletedTokens.deletedCount === 0 ||
+    deletedTokens.deletedCount === undefined
+  ) {
+    throw new AppError(
+      "No active sessions found for the user",
+      StatusCodes.NOT_FOUND,
+    );
   }
 };
 
@@ -144,7 +161,6 @@ exports.verifyEmail = async (token) => {
   user.isVerified = true;
 
   await user.save();
-
 };
 
 exports.forgotPassword = async (email) => {
@@ -161,17 +177,29 @@ exports.forgotPassword = async (email) => {
     type: "passwordReset",
   });
 
-  const { token, hashedToken } = generateToken();
+  const { token, hashedToken } = generateVerificationToken();
 
   await TokenModel.create({
     userId: user._id,
     token: hashedToken,
     type: "passwordReset",
-    expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
+    expiresAt: new Date(
+      Date.now() + Number(process.env.PASSWORD_RESET_TOKEN_TTL),
+    ), // 10 min
   });
 
   const resetURL = `${process.env.CLIENT_URL}/reset-password/${token}`;
-  await sendPasswordResetEmail(user.email, resetURL);
+  console.log("Password Reset URL:", resetURL); // For debugging
+
+  try {
+    await sendPasswordResetEmail(user.email, resetURL);
+  } catch (error) {
+    console.error("Error sending password reset email:", error);
+    throw new AppError(
+      "Failed to send password reset email. Please try again later.",
+      StatusCodes.INTERNAL_SERVER_ERROR,
+    );
+  }
 };
 
 exports.resetPassword = async (token, newPassword) => {
@@ -195,6 +223,42 @@ exports.resetPassword = async (token, newPassword) => {
   user.password = await hashPassword(newPassword);
   await user.save();
 };
+
+// exports.sendVerificationEmailService = async (email) => {
+//   const newUser = await UserModel.findOne({ email });
+//   // Don't reveal if email exists
+//   if (!newUser) {
+//     return;
+//   }
+
+//   const { token, hashedToken } = generateVerificationToken();
+
+//   await TokenModel.deleteMany({
+//     userId: newUser._id,
+//     type: "emailVerification",
+//   });
+
+//   await TokenModel.create({
+//     userId: newUser._id,
+//     token: hashedToken,
+//     type: "emailVerification",
+//     expiresAt: new Date(Date.now() + Number(process.env.EMAIL_VERIFICATION_TOKEN_TTL)), // 1 hour expiry
+//   });
+
+//   // send email
+//   const verifyURL = `${process.env.CLIENT_URL}/verify-email/${token}`;
+//   console.log("Verification URL:", verifyURL); // For debugging
+
+//   try {
+//     await sendVerificationEmail(newUser.email, verifyURL);
+//   } catch (error) {
+//     console.error("Error sending verification email:", error);
+//     throw new AppError(
+//       "Failed to send verification email. Please try again later.",
+//       StatusCodes.INTERNAL_SERVER_ERROR,
+//     );
+//   }
+// };
 
 // Refresh token service with rotation and reuse detection
 exports.refresh = async (refreshToken) => {
