@@ -1,4 +1,4 @@
-require("mongoose");
+const mongoose = require("mongoose");
 
 const auditLogSchema = new mongoose.Schema(
   {
@@ -10,6 +10,9 @@ const auditLogSchema = new mongoose.Schema(
     action: {
       type: String,
       required: true,
+    },
+    resource: {
+      type: String,
     },
     ipAddress: {
       type: String,

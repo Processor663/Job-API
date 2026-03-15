@@ -13,17 +13,16 @@ const requestLogger = require("./src/middlewares/requestLogger");
 // Global error handler
 const globalErrorHandler = require("./src/middlewares/globalErrorHandler"); 
 
+// AppError class for custom error handling
+const AppError = require("./src/utils/AppError");
+
 // auth routes
 const authRoutes = require("./src/routes/auth.routes");
 const jobsRoutes = require("./src/routes/jobs.routes");
 
-// AppError class for custom error handling
-const AppError = require("./src/utils/AppError");
-
-
-
 
 const dns = require("dns");
+const { StatusCodes } = require("http-status-codes");
 dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 const PORT = process.env.PORT || 3500;
@@ -32,8 +31,9 @@ const PORT = process.env.PORT || 3500;
 app.use(cookieParser());
 app.use(express.json());
 
-// Use request logger for all routes
+// HTTP Request logging
 app.use(requestLogger);
+
 
 // Routes
 app.use('/api/v1/auth', authRoutes)
@@ -42,8 +42,9 @@ app.use('/api/v1', jobsRoutes)
 // Catch-all for this router only
 app.use((req, res, next) => {
   // res.status(404).json({ message: "Route not found" });
-    next(new AppError(`Can't find ${req.originalUrl} on this server!`, 404));
+    next(new AppError(`Can't find ${req.originalUrl} on this server!`, StatusCodes.NOT_FOUND));
 });
+
 
 // Global error handling middleware (it should be defined after all routes and other middlewares)
 app.use(globalErrorHandler);

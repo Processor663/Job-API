@@ -1,10 +1,9 @@
-const { logger } = require("../config/logger");
+const logger = require("../config/logger");
 
-{logger.info("Stream initialized") }
-
-
-module.exports = {
+const stream = {
   write: (message) => {
     logger.info(message.trim());
   },
 };
+
+module.exports = stream;

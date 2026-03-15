@@ -1,7 +1,9 @@
-const { morgan } = require("morgan");
-const { stream } = require("../utils/stream.js");
+const morgan = require("morgan");
+const stream = require("../utils/stream");
 
-exports.requestLogger = morgan(
+const requestLogger = morgan(
   ":method :url :status :response-time ms - :res[content-length]",
   { stream },
 );
+
+module.exports = requestLogger;

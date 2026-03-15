@@ -1,7 +1,7 @@
-const { AuditLog } = require("../models/auditLog.model.js");
-const { logger } = require("../config/logger.js");
+const AuditLog = require("../models/auditLog.model");
+const logger = require("../config/logger");
 
-exports.logAuditEvent = async ({
+exports.logAudit = async ({
   userId,
   action,
   ipAddress,

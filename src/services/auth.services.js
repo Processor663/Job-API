@@ -17,6 +17,7 @@ const {
   generateRefreshToken,
   hashToken,
 } = require("../utils/token");
+const { logAudit } = require("./audit.service");
 
 // Registration service
 exports.register = async (user) => {
@@ -108,7 +109,10 @@ exports.login = async (credentials) => {
 // logout service
 exports.logout = async (refreshToken) => {
   const tokenHash = hashToken(refreshToken);
-  const deletedToken = await TokenModel.findOneAndDelete({ token: tokenHash, type: "refreshToken" });
+  const deletedToken = await TokenModel.findOneAndDelete({
+    token: tokenHash,
+    type: "refreshToken",
+  });
 
   if (!deletedToken) {
     throw new AppError("Invalid refresh token", StatusCodes.BAD_REQUEST);
@@ -123,7 +127,10 @@ exports.logoutAllSessions = async (userId) => {
       StatusCodes.BAD_REQUEST,
     );
 
-  const deletedTokens = await TokenModel.deleteMany({ userId, type: "refreshToken" });
+  const deletedTokens = await TokenModel.deleteMany({
+    userId,
+    type: "refreshToken",
+  });
   if (
     deletedTokens.deletedCount === 0 ||
     deletedTokens.deletedCount === undefined
@@ -225,6 +232,8 @@ exports.resetPassword = async (token, newPassword) => {
 
   user.password = await hashPassword(newPassword);
   await user.save();
+
+  return user;
 };
 
 exports.requestEmailVerification = async (email) => {
@@ -237,7 +246,6 @@ exports.requestEmailVerification = async (email) => {
   if (user.isVerified) {
     throw new AppError("Email is already verified", StatusCodes.BAD_REQUEST);
   }
-
 
   // delete old verification tokens
   await TokenModel.deleteMany({
