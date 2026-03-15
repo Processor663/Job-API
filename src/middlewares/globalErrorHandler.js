@@ -2,7 +2,8 @@
 const AppError = require("../utils/AppError");
 const { StatusCodes } = require("http-status-codes");
 require("dotenv").config();
-// const logger = require("../config/logger"); // Winston logger
+const logger = require("../config/logger"); // Winston logger
+
 
 // ------------------- DATABASE ERROR HANDLERS -------------------
 
@@ -42,6 +43,14 @@ const handleJWTExpiredError = () =>
 // ------------------- SEND ERROR -------------------
 
 const sendErrorDev = (err, res) => {
+  logger.error("Unhandled error", {
+    message: err.message,
+    stack: err.stack,
+    path: req.originalUrl,
+    method: req.method,
+  });
+
+
   res.status(err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
     message: err.message,
@@ -53,6 +62,12 @@ const sendErrorDev = (err, res) => {
 const sendErrorProd = (err, res) => {
   // Always log error in production
   // logger.error(err);
+  logger.error("Unhandled error", {
+    message: err.message,
+    stack: err.stack,
+    path: req.originalUrl,
+    method: req.method,
+  });
 
   res.status(err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,

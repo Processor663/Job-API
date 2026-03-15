@@ -7,6 +7,12 @@ const cookieParser = require('cookie-parser');
 // connectDB
 const {connectDB, disconnectDB} = require("./src/config/connectDB");
 
+// Request Logger
+const requestLogger = require("./src/middlewares/requestLogger");
+
+// Global error handler
+const globalErrorHandler = require("./src/middlewares/globalErrorHandler"); 
+
 // auth routes
 const authRoutes = require("./src/routes/auth.routes");
 const jobsRoutes = require("./src/routes/jobs.routes");
@@ -14,8 +20,7 @@ const jobsRoutes = require("./src/routes/jobs.routes");
 // AppError class for custom error handling
 const AppError = require("./src/utils/AppError");
 
-// Global error handler
-const globalErrorHandler = require("./src/middlewares/globalErrorHandler"); 
+
 
 
 const dns = require("dns");
@@ -23,11 +28,14 @@ dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 const PORT = process.env.PORT || 3500;
 
-
-
 // Middlewares
 app.use(cookieParser());
 app.use(express.json());
+
+// Use request logger for all routes
+app.use(requestLogger);
+
+// Routes
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1', jobsRoutes)
 
