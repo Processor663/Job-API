@@ -5,5 +5,4 @@ const requestLogger = morgan(
   ":method :url :status :response-time ms - :res[content-length]",
   { stream },
 );
-
 module.exports = requestLogger;

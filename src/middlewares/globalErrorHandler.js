@@ -43,8 +43,7 @@ const handleJWTExpiredError = () =>
 // ------------------- SEND ERROR -------------------
 
 const sendErrorDev = (err, req, res, next) => {
-    logger.error("Unhandled error:", {
-      message: err.message,
+    logger.error(err.message, {
       stack: err.stack,
       path: req.originalUrl,
       method: req.method,
@@ -63,15 +62,13 @@ const sendErrorDev = (err, req, res, next) => {
 
 const sendErrorProd = (err, req, res) => {
   // Always log error in production
-  logger.error("Unhandled error:", {
-    message: err.message,
+  logger.error(err.message, {
     stack: err.stack,
     path: req.originalUrl,
     method: req.method,
     url: req.originalUrl,
     ip: req.ip,
   });
-
 
   res.status(err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
     success: false,
