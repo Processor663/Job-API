@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const AppError = require("../utils/AppError");
 const { StatusCodes } = require("http-status-codes");
+const logger = require("./logger");
 
 const connectDB = async (URI) => {
   if (!URI) {
@@ -12,8 +13,13 @@ const connectDB = async (URI) => {
   try {
     await mongoose.connect(URI)
     console.log("MongoDB connected successfully");
+    logger.info("MongoDB connected successfully");
   } catch (error) {
     console.error("Error connecting to MongoDB:", error.message);
+    logger.error("Error connecting to MongoDB", {
+      error: error.message,
+      stack: error.stack,
+    });
     process.exit(1); // Exit app if DB fails
   }
 };
@@ -22,8 +28,13 @@ const disconnectDB = async () => {
   try {
     await mongoose.disconnect()
     console.log("MongoDB disconnected successfully");
+    logger.info("MongoDB disconnected successfully");
   } catch (error) {
     console.error("Error disconnecting from MongoDB:", error.message);
+    logger.error("Error disconnecting from MongoDB", {
+      error: error.message,
+      stack: error.stack,
+    }); 
     process.exit(1); // Exit app if DB fails
   }
 };

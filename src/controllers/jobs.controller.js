@@ -5,6 +5,8 @@ const {
   createJobSchema,
   updateJobSchema,
 } = require("../validators/job.validator");
+const logger = require("../config/logger");
+
 
 // Jobs Model
 const {
@@ -43,6 +45,7 @@ exports.JobCreate = asyncHandler(async (req, res) => {
 
   // Create job from service Layer
   const createdJob = await createJob(jobData, userId);
+  logger.info("Job created successfully", { jobId: createdJob._id, postedBy: userId });
   return res.status(StatusCodes.CREATED).json({
     success: true,
     message: "Job created successfully",
@@ -68,6 +71,7 @@ exports.jobUpdate = asyncHandler(async (req, res) => {
   }
 
   const updatedJob = await updateJob(jobId, jobData);
+  logger.info("Job updated successfully", { jobId: updatedJob._id, updatedBy: req.user.id });
   res.status(StatusCodes.OK).json(updatedJob);
 });
 
@@ -84,6 +88,7 @@ exports.deleteJob = asyncHandler(async (req, res) => {
   if (!deletedJob) {
     throw new AppError(`Job with ID ${jobId} not found`, StatusCodes.NOT_FOUND);
   }
+  logger.info("Job deleted successfully", { jobId: deletedJob._id, deletedBy: req.user.id });
   return res.status(StatusCodes.NO_CONTENT).json({
     success: true,
     message: "Job deleted successfully",

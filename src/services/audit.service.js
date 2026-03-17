@@ -1,7 +1,7 @@
-const AuditLog = require("../models/auditLog.model");
+const AuditLogModel = require("../models/auditLog.model");
 const logger = require("../config/logger");
 
-exports.logAudit = async ({
+const logAudit = async ({
   userId,
   action,
   ipAddress,
@@ -9,7 +9,7 @@ exports.logAudit = async ({
   metadata = {},
 }) => {
   try {
-    await AuditLog.create({
+    await AuditLogModel.create({
       userId,
       action,
       ipAddress,
@@ -26,3 +26,6 @@ exports.logAudit = async ({
     });
   }
 };
+
+
+module.exports = { logAudit };

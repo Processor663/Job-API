@@ -53,6 +53,11 @@ Input validation & sanitization
     "jsonwebtoken": "",
     "mongoose": "",
     "zod": ""
+    "morgan": " ",
+    "nodemailer": " ",
+    "winston": " ",
+    "winston-daily-rotate-file": " ",
+    "zod": " "
   },
   "devDependencies": {
     "nodemon": ""

@@ -23,16 +23,16 @@ const AppError = require("./src/utils/AppError");
 const authRoutes = require("./src/routes/auth.routes");
 const jobsRoutes = require("./src/routes/jobs.routes");
 
-
-const dns = require("dns");
+// HTTP status codes
 const { StatusCodes } = require("http-status-codes");
 
-
+// Set DNS servers for development environment to avoid potential DNS resolution issues
 if (process.env.NODE_ENV !== "production") {
+  const dns = require("dns");
   dns.setServers(["1.1.1.1", "8.8.8.8"]);
 }
 
-
+// Port configuration
 const PORT = process.env.PORT || 3500;
 
 // Middlewares

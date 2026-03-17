@@ -13,6 +13,8 @@ const {
 require("dotenv").config();
 const AppError = require("../utils/AppError");
 const asyncHandler = require("express-async-handler");
+const { logAudit } = require("../services/audit.service");
+const logger = require("../config/logger");
 
 
 // check if we are in production environment to set secure cookie options
@@ -65,17 +67,20 @@ exports.loginController = asyncHandler(async (req, res) => {
     );
   }
 
-  const { accessToken, refreshToken } = await login(userData);
+  const { userId, accessToken, refreshToken } = await login(userData);
 
   // Log audit event for successful login
-  const userId = req.user?.id; 
+  // const userId = req.user?.id; 
   await logAudit({
-    userId,
+    userId: userId,
     action: "USER_LOGIN",
     resource: "AUTH",
     ipAddress: req.ip,
     userAgent: req.headers["user-agent"],
   });
+
+  // Log successful login with user ID and IP address
+  logger.info("User logged in successfully", { userId, ipAddress: req.ip, userAgent: req.headers["user-agent"]});
 
   res
     .cookie("accessToken", accessToken, accessCookieOptions)
@@ -158,6 +163,9 @@ exports.resetPasswordController = asyncHandler(async (req, res) => {
     userAgent: req.headers["user-agent"],
   });
  
+  // Log password reset event with user ID and IP address
+  logger.info("Password reset process executed", { userId: user._id, ipAddress: req.ip, userAgent: req.headers["user-agent"]});
+ 
   res.status(StatusCodes.OK).json({ success: true, message: "Password reset successfully" });
 });
 
@@ -177,6 +185,7 @@ exports.refreshController = asyncHandler(async (req, res) => {
   
     const { newAccessToken, newRefreshToken } = await refresh(
       req.cookies.refreshToken,
+      { ip: req.ip, userAgent: req.headers["user-agent"] },
     );
     res
       .cookie("accessToken", newAccessToken, accessCookieOptions)

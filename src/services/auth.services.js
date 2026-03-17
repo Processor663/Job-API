@@ -17,7 +17,8 @@ const {
   generateRefreshToken,
   hashToken,
 } = require("../utils/token");
-const { logAudit } = require("./audit.service");
+// const logAudit  = require("./audit.service");
+const logger = require("../config/logger");
 
 // Registration service
 exports.register = async (user) => {
@@ -55,6 +56,7 @@ exports.register = async (user) => {
     await sendVerificationEmail(user.email, verifyURL);
   } catch (error) {
     console.error("Email sending failed:", error.message);
+    logger.error("Failed to send verification email", { error: error.message });
     throw new AppError(
       "Failed to send verification email. Please try again later.",
       StatusCodes.INTERNAL_SERVER_ERROR,
@@ -103,7 +105,7 @@ exports.login = async (credentials) => {
     expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
   });
 
-  return { accessToken, refreshToken };
+  return { id: user._id, accessToken, refreshToken };
 };
 
 // logout service
@@ -280,7 +282,7 @@ exports.requestEmailVerification = async (email) => {
 };
 
 // Refresh token service with rotation and reuse detection
-exports.refresh = async (refreshToken) => {
+exports.refresh = async (refreshToken, { ip, userAgent }) => {
   const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
   const tokenHash = hashToken(refreshToken);
 
@@ -295,6 +297,13 @@ exports.refresh = async (refreshToken) => {
     console.warn(
       `⚠️ Refresh token reuse detected for user ${decoded.id} at ${new Date().toISOString()}`,
     );
+    // Log the event with user ID and IP address
+    logger.warn("Refresh token reuse detected", {
+      userId: decoded.id,
+      ipAddress: ip,
+      userAgent,
+    }); 
+    
     throw new AppError(
       "Refresh token reuse detected. Please login again.",
       StatusCodes.BAD_REQUEST,
