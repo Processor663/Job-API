@@ -10,10 +10,10 @@ const logAudit = async ({
 }) => {
   try {
     await AuditLogModel.create({
-      userId,
+      userId: userId || null, // Allow null for unauthenticated actions
       action,
-      ipAddress,
-      userAgent,
+      ipAddress: ipAddress || "N/A",
+      userAgent: userAgent || "N/A",
       metadata,
     });
 
@@ -22,10 +22,11 @@ const logAudit = async ({
     logger.error("Audit log failed", {
       error: error.message,
       action,
-      userId,
+      userId: userId || "N/A",
     });
   }
 };
 
-
 module.exports = { logAudit };
+
+

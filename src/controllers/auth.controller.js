@@ -67,20 +67,21 @@ exports.loginController = asyncHandler(async (req, res) => {
     );
   }
 
-  const { userId, accessToken, refreshToken } = await login(userData);
+  const { accessToken, refreshToken } = await login(userData);
 
   // Log audit event for successful login
-  // const userId = req.user?.id; 
+  const userId = req.user?.id; 
   await logAudit({
-    userId: userId,
+    userId: userId, // Use userId from login response or null if not available
     action: "USER_LOGIN",
     resource: "AUTH",
     ipAddress: req.ip,
     userAgent: req.headers["user-agent"],
+    metadata: { email: req.user?.email } || {}, // Include email in metadata if available
   });
 
   // Log successful login with user ID and IP address
-  logger.info("User logged in successfully", { userId, ipAddress: req.ip, userAgent: req.headers["user-agent"]});
+  logger.info("User logged in successfully", { userId, ipAddress: req.ip || "N/A", userAgent: req.headers["user-agent"] || "N/A"});
 
   res
     .cookie("accessToken", accessToken, accessCookieOptions)
@@ -193,4 +194,6 @@ exports.refreshController = asyncHandler(async (req, res) => {
       .status(StatusCodes.OK)
       .json({ success: true, message: "Token refreshed" });
 });
+
+
 

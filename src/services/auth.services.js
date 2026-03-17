@@ -105,7 +105,7 @@ exports.login = async (credentials) => {
     expiresAt: new Date(Date.now() + Number(process.env.REFRESH_TOKEN_TTL)),
   });
 
-  return { id: user._id, accessToken, refreshToken };
+  return { accessToken, refreshToken };
 };
 
 // logout service
