@@ -10,6 +10,10 @@ const {
   requestEmailVerification,
   refresh,
 } = require("../services/auth.services");
+
+// Validation schema
+const { registerSchema } = require("../validators/register.validator");
+
 require("dotenv").config();
 const AppError = require("../utils/AppError");
 const asyncHandler = require("express-async-handler");
@@ -40,7 +44,16 @@ const refreshCookieOptions = {
 
 // Controller for user registration
 exports.registerController = asyncHandler(async (req, res) => {
-  const userData = req.body;
+  // const { error, data } = registerSchema.safeParse(req.body);
+  // if (error) {
+  //   throw new AppError(
+  //     "Invalid user data provided",
+  //     StatusCodes.BAD_REQUEST
+  //   );
+  // }
+  // const userData = {  ...data};
+
+  const { role, ...userData} = req.body;
 
   if (!userData.name || !userData.email || !userData.password) {
     throw new AppError(
