@@ -44,16 +44,14 @@ const refreshCookieOptions = {
 
 // Controller for user registration
 exports.registerController = asyncHandler(async (req, res) => {
-  // const { error, data } = registerSchema.safeParse(req.body);
-  // if (error) {
-  //   throw new AppError(
-  //     "Invalid user data provided",
-  //     StatusCodes.BAD_REQUEST
-  //   );
-  // }
-  // const userData = {  ...data};
-
-  const { role, ...userData} = req.body;
+  const { error, data } = registerSchema.safeParse(req.body);
+  if (error) {
+    throw new AppError(
+      "Invalid user data provided",
+      StatusCodes.BAD_REQUEST
+    );
+  }
+  const userData = data;
 
   if (!userData.name || !userData.email || !userData.password) {
     throw new AppError(
