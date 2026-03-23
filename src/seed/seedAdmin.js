@@ -2,24 +2,34 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const User = require("../models/auth.model");
 const { hashPassword } = require("../utils/password.util");
+const logger = require("../config/logger");
+
 
 const MONGO_URI = process.env.MONGO_URI;
+const dns = require("dns");
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
-async function seedAdmin() {
+mongoose
+  .connect(MONGO_URI)
+  .then(() => console.log("DB connected"))
+  .catch((err) => {
+    console.error("DB connection error:", err);
+    logger.error("DB connection error for seedAdmin", { error: err.message, stack: err.stack });
+    process.exit(1);
+  });
+
+const seedAdmin = async () => {
   try {
-    await mongoose.connect(MONGO_URI);
-    console.log("DB connected");
-
     const existingAdmin = await User.findOne({
       email: process.env.ADMIN_EMAIL,
     });
-
     if (existingAdmin) {
       console.log("Admin user already exists");
-      return;
+      logger.info("Admin user already exists", { email: process.env.ADMIN_EMAIL });
+      process.exit();
     }
 
-    const password = await hashPassword(process.env.ADMIN_PASSWORD);
+    const password = await hashPassword(process.env.ADMIN_PASSWORD); // default admin password
 
     const admin = await User.create({
       name: "super admin",
@@ -29,13 +39,17 @@ async function seedAdmin() {
       isVerified: true,
     });
 
-    console.log("Admin seeded:", admin);
+    logger.info("Admin seeded", { email: process.env.ADMIN_EMAIL });
+    process.exit();
   } catch (error) {
-    console.error("Error seeding admin:", error);
+    logger.error("Error seeding admin", { error: error.message, stack: error.stack });
+    process.exit(1);
   } finally {
-    await mongoose.disconnect();
+    await mongoose.disconnect(); 
     process.exit(); 
-  }
-}
+  } 
+};
 
 seedAdmin();
+
+
