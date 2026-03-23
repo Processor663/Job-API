@@ -4,28 +4,22 @@ const User = require("../models/auth.model");
 const { hashPassword } = require("../utils/password.util");
 
 const MONGO_URI = process.env.MONGO_URI;
-const dns = require("dns");
-dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("DB connected"))
-  .catch((err) => {
-    console.error("DB connection error:", err);
-    process.exit(1);
-  });
-
-const seedAdmin = async () => {
+async function seedAdmin() {
   try {
+    await mongoose.connect(MONGO_URI);
+    console.log("DB connected");
+
     const existingAdmin = await User.findOne({
       email: process.env.ADMIN_EMAIL,
     });
+
     if (existingAdmin) {
       console.log("Admin user already exists");
-      process.exit();
+      return;
     }
 
-    const password = await hashPassword(process.env.ADMIN_PASSWORD); // default admin password
+    const password = await hashPassword(process.env.ADMIN_PASSWORD);
 
     const admin = await User.create({
       name: "super admin",
@@ -36,14 +30,12 @@ const seedAdmin = async () => {
     });
 
     console.log("Admin seeded:", admin);
-    process.exit();
   } catch (error) {
     console.error("Error seeding admin:", error);
-    process.exit(1);
   } finally {
-    await mongoose.disconnect(); 
-    process.exit(); // ✅ then exit
-  } 
-};
+    await mongoose.disconnect();
+    process.exit(); 
+  }
+}
 
 seedAdmin();
