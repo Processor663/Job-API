@@ -40,7 +40,10 @@ const seedAdmin = async () => {
   } catch (error) {
     console.error("Error seeding admin:", error);
     process.exit(1);
-  }
+  } finally {
+    await mongoose.disconnect(); 
+    process.exit(); // ✅ then exit
+  } 
 };
 
 seedAdmin();
